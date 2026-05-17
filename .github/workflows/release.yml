@@ -8,27 +8,29 @@ on:
 permissions:
   contents: write
 
+# `os` stays as the stable job-name label even when `runner` changes between
+# providers (same pattern as captured-ventures/rememberize-cli).
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
-    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
+            runner: blacksmith-2vcpu-windows-2025
             platform: windows/amd64
-            ext: exe
             arch: amd64
             artifact_name: upmark-windows-amd64
           - os: macos-latest
+            runner: blacksmith-6vcpu-macos-latest
             platform: darwin/universal
-            ext: zip
             arch: universal
             artifact_name: upmark-macos-universal
           - os: ubuntu-latest
+            runner: blacksmith-4vcpu-ubuntu-2404
             platform: linux/amd64
-            ext: tar.gz
             arch: amd64
             artifact_name: upmark-linux-amd64
     steps:
@@ -87,7 +89,7 @@ jobs:
   release:
     name: Create GitHub Release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 

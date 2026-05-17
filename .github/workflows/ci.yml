@@ -9,10 +9,14 @@ on:
 permissions:
   contents: read
 
+# `os` is the stable label that drives the job name (and the names required
+# by main-branch rulesets). `runner` is the actual runs-on value, which can
+# change without breaking rulesets. Keep `os` literal even when migrating
+# between runner providers.
 jobs:
   go:
     name: Go lint + build
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -38,7 +42,7 @@ jobs:
 
   frontend:
     name: Frontend check + build
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: frontend
@@ -62,7 +66,7 @@ jobs:
 
   wails-smoke:
     name: Wails build smoke (linux)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     needs: [go, frontend]
     steps:
       - uses: actions/checkout@v4
