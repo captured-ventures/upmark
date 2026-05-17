@@ -20,7 +20,7 @@ It is intentionally small. No plugin marketplace, no syncing, no AI sidebar (tho
 
 ## Screenshot
 
-> _Screenshot pending — open `sample.md` in the editorial theme to see the rendered demo._
+![upmark empty state, editorial theme, dark OS preference](docs/screenshot.png)
 
 ## Features
 

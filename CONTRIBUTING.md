@@ -66,7 +66,7 @@ Anything new in `frontend/src/styles/themes.css` must respect the `[data-theme=.
 
 ### `!important` is the documented escape hatch for theme overrides
 
-Svelte 4's component-scoped CSS doubles the hash class on the selector, producing specificity `(0,3,0)`. Global theme rules that target the same class tie on specificity and lose by source order. For any property a Svelte component declares, theme overrides must use `!important`. Don't try to out-specificity Svelte. See [HANDOFF.md → Non-obvious things](HANDOFF.md) for the full explanation.
+Svelte 4's component-scoped CSS doubles the hash class on the selector, producing specificity `(0,3,0)`. Global theme rules that target the same class tie on specificity and lose by source order. For any property a Svelte component declares, theme overrides must use `!important`. Don't try to out-specificity Svelte.
 
 ### One window, one document, one job
 
@@ -74,7 +74,7 @@ upmark is intentionally narrow. New features should make the reading or note-tra
 
 ## Repo layout
 
-See the [HANDOFF.md](HANDOFF.md) for a full tour of the codebase, the data flow, and a list of "non-obvious things" that will save you debugging time on Svelte specificity, WebView2 scroll quirks, and the frameless-window maximize race.
+The top-level Go files (`app.go`, `renderer.go`, `frontmatter.go`, `folder.go`, `prefs.go`, `watcher.go`, `mcp.go`, `urlopen.go`, etc.) each own one concern. The Svelte frontend lives in `frontend/src/` — see [`frontend/README.md`](frontend/README.md) for the layout.
 
 ## License
 

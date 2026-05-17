@@ -27,3 +27,6 @@ desktop.ini
 # Local env
 .env
 .env.local
+
+# Local-only working notes, kickoff/handoff docs, scratch
+local/
