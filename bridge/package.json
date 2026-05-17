@@ -1,0 +1,17 @@
+{
+  "name": "upmark-mcp-bridge",
+  "version": "0.7.0",
+  "description": "stdio<->SSE bridge so MCP clients without localhost SSE support (Claude Desktop, Claude Code) can talk to upmark's MCP server",
+  "main": "bridge.js",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
