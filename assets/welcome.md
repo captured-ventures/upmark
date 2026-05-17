@@ -173,7 +173,7 @@ When it's running, any MCP client that supports a localhost SSE endpoint — Cur
 
 The use-case is using upmark as the *reading surface* for an agent. The model writes a design review, a plan, a status update; you read it in good typography, check off the items you're approving; the model polls to see what stuck.
 
-A note on the Claude family: Claude Desktop, Claude Code, and Claude.ai don't currently support localhost SSE MCP servers — only stdio or remote. A `.mcpb` bundle that bridges the two is in the works; until it ships, Claude can't talk to upmark directly. Every other MCP client listed above works today.
+A note on the Claude family: Claude Desktop, Claude Code, and Claude.ai don't speak localhost SSE directly. Install the `upmark.mcpb` bundle from any [GitHub release](https://github.com/captured-ventures/upmark/releases) (Claude Desktop → Settings → Extensions → Install Extension → pick the file) and they'll work over a stdio bridge. Every other MCP client listed above connects to the SSE endpoint directly, no bundle needed.
 
 It's localhost-only with no auth. Don't expose the port.
 

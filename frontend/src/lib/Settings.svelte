@@ -405,9 +405,10 @@ url = "${url}"`,
               </ul>
 
               <p class="hint hint-aside">
-                Claude Desktop, Claude Code, Claude.ai, and Zed don't currently
-                support localhost SSE — a stdio bridge is planned (issue
-                <a href="https://github.com/captured-ventures/upmark/issues/9" target="_blank" rel="noopener">#9</a>).
+                Claude Desktop, Claude Code, and Claude.ai don't speak localhost SSE —
+                install the <code>upmark.mcpb</code> bundle from the
+                <a href="https://github.com/captured-ventures/upmark/releases" target="_blank" rel="noopener">GitHub release</a>
+                to bridge them. Zed support is still pending upstream.
               </p>
             {/if}
 

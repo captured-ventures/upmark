@@ -6,13 +6,13 @@ This folder is the working copy of what eventually gets packaged as `upmark.mcpb
 
 ## Status
 
-Phase 4 of [#9](https://github.com/captured-ventures/upmark/issues/9).
+Closes [#9](https://github.com/captured-ventures/upmark/issues/9). All 5 phases shipped.
 
 - [x] Phase 1: backend `--mcp-server` flag + lockfile + idle exit + window-show pref
 - [x] Phase 2: stdio↔SSE proxy against a *running* upmark
 - [x] Phase 3: bridge auto-launches `upmark --mcp-server` when not running
 - [x] Phase 4: MCPB packaging (`manifest.json` + zip → `upmark.mcpb`)
-- [ ] Phase 5: release workflow attaches `.mcpb` to GitHub Releases
+- [x] Phase 5: release workflow attaches `.mcpb` to GitHub Releases
 
 ## Pack a .mcpb locally
 
@@ -22,7 +22,9 @@ npm install     # one-time, gets the MCP SDK
 npm run pack    # produces upmark.mcpb in this directory
 ```
 
-`upmark.mcpb` is a zip containing `manifest.json`, `bridge.js`, the icon, and `node_modules`. Drag it into Claude Desktop (Settings → Extensions) to install. Tools appear immediately; first tool call triggers the bridge → auto-launches upmark → proxies.
+`upmark.mcpb` is a zip containing `manifest.json`, `bridge.js`, the icon, and `node_modules`. Install via Claude Desktop → Settings → Extensions → Install Extension → pick the file. (The current Extensions pane is file-picker only; no drag/drop.) Tools appear immediately; first tool call triggers the bridge → auto-launches upmark → proxies.
+
+If you're testing against a dev build instead of an installed upmark, set the `upmark_bin` user-config in the extension's settings to the absolute path of your `upmark.exe` (or set the `UPMARK_BIN` env var). Otherwise the bridge probes only the NSIS / Applications / standard PATH locations.
 
 ## Run it
 
