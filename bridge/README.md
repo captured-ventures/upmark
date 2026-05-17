@@ -6,41 +6,47 @@ This folder is the working copy of what eventually gets packaged as `upmark.mcpb
 
 ## Status
 
-Phase 2 of [#9](https://github.com/captured-ventures/upmark/issues/9).
+Phase 3 of [#9](https://github.com/captured-ventures/upmark/issues/9).
 
 - [x] Phase 1: backend `--mcp-server` flag + lockfile + idle exit + window-show pref
 - [x] Phase 2: stdio↔SSE proxy against a *running* upmark
-- [ ] Phase 3: bridge auto-launches `upmark --mcp-server` when not running
+- [x] Phase 3: bridge auto-launches `upmark --mcp-server` when not running
 - [ ] Phase 4: MCPB packaging (`manifest.json` + zip → `upmark.mcpb`)
 - [ ] Phase 5: release workflow attaches `.mcpb` to GitHub Releases
 
 ## Run it
 
-You need upmark already running with the MCP server enabled. The simplest way is:
-
-```sh
-# in one terminal — starts upmark headless and runs the MCP server
-upmark.exe --mcp-server
-```
-
-Then in another terminal:
-
 ```sh
 cd bridge
 npm install      # one-time
-node bridge.js   # speaks stdio MCP, proxies to the running upmark
+node bridge.js   # speaks stdio MCP, proxies to upmark
 ```
+
+If upmark is already running, the bridge connects to its SSE endpoint. If not, it locates the upmark binary, launches it in `--mcp-server` mode, polls until the endpoint is up (~1-2s typical cold start), then proxies. The launched upmark is detached — bridge exit doesn't take it down, the user may still be reading.
 
 Useful for connecting a stdio-only MCP client (Claude Desktop, MCP Inspector, etc.).
 
 ## Endpoint discovery
 
-In priority order:
+For the SSE URL the bridge connects to, in priority order:
 
 1. `UPMARK_MCP_URL` env var (full SSE URL — override for testing)
 2. `mcp.lock` in upmark's config directory (matches the live server's port)
 3. `UPMARK_MCP_PORT` env var (port-only shorthand)
 4. Default port `11451`
+
+## Binary discovery (Phase 3 auto-launch)
+
+If no live server is found, the bridge needs to launch upmark. It looks for the binary in:
+
+1. `UPMARK_BIN` env var (explicit path override)
+2. Platform default install locations:
+   - **Windows:** `%PROGRAMFILES%\Captured Ventures\upmark\upmark.exe`, `%PROGRAMFILES(X86)%\Captured Ventures\upmark\upmark.exe`, `%LOCALAPPDATA%\Programs\upmark\upmark.exe`
+   - **macOS:** `/Applications/upmark.app/Contents/MacOS/upmark`, `~/Applications/upmark.app/Contents/MacOS/upmark`
+   - **Linux:** `/usr/local/bin/upmark`, `/usr/bin/upmark`, `~/.local/bin/upmark`
+3. `PATH` search (`upmark` / `upmark.exe`)
+
+If none of these work, the bridge exits with a clear error directing the user to install upmark or set `UPMARK_BIN`.
 
 ## Smoke test
 

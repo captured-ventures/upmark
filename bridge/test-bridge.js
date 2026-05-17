@@ -25,9 +25,15 @@ const EXPECTED_TOOLS = [
 ]
 
 async function main() {
+  // StdioClientTransport uses a minimal "default environment" for security
+  // unless env is supplied explicitly. Forward our env so UPMARK_BIN /
+  // UPMARK_MCP_URL / UPMARK_MCP_PORT overrides reach the bridge.
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ['./bridge.js'],
+    env: Object.fromEntries(
+      Object.entries(process.env).filter(([, v]) => v !== undefined),
+    ),
   })
 
   const client = new Client(
