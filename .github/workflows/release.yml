@@ -130,9 +130,57 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  # The MCPB bundle is platform-independent — it's a zip of Node code that
+  # Claude Desktop / Code unpacks on install. One build is enough for all
+  # platforms. Runs in parallel with the platform matrix.
+  mcpb:
+    name: Build MCPB
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: bridge/package-lock.json
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp manifest version
+        shell: bash
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          jq --arg v "$v" '.version = $v' bridge/manifest.json > bridge/manifest.json.tmp
+          mv bridge/manifest.json.tmp bridge/manifest.json
+
+      - name: Install bridge deps
+        run: npm ci
+        working-directory: bridge
+
+      - name: Pack MCPB
+        run: npm run pack
+        working-directory: bridge
+
+      - name: Stage MCPB artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp bridge/upmark.mcpb "dist/upmark-${{ steps.version.outputs.version }}.mcpb"
+
+      - name: Upload MCPB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: upmark-mcpb
+          path: dist/*
+          if-no-files-found: error
+
   release:
     name: Create GitHub Release
-    needs: build
+    needs: [build, mcpb]
     runs-on: blacksmith-2vcpu-ubuntu-2404
     # Hoisted to job level so the dispatch step's `if:` can read env.* — GHA
     # evaluates step-level `if:` before that step's own `env:` is applied.
