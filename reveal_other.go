@@ -4,6 +4,7 @@ package main
 
 import (
 	"os/exec"
+	"path/filepath"
 	"runtime"
 )
 
