@@ -299,13 +299,17 @@ export function scrollToInViewer(
   viewer.scrollTo({ top: Math.max(0, target), behavior })
 }
 
-// Make GFM task list checkboxes interactive — goldmark renders them with
-// `disabled`. For MCP-presented docs we re-enable them and wire each one to
-// a per-doc task id so the calling LLM can poll user selections.
+// Make GFM task list checkboxes interactive. Goldmark renders them with the
+// `disabled` attribute, which is the right default for static rendering but
+// surprising in a reader app — the user expects to be able to check things.
+//
+// For MCP-presented docs the caller passes a docId + onToggle so each box's
+// state can be reported back to the calling LLM. For regular docs the handler
+// is optional; in-session toggles work but state doesn't persist across reload.
 export function enableTaskList(
   root: HTMLElement,
-  docId: string,
-  onToggle: (docId: string, taskId: number, checked: boolean) => void,
+  docId?: string,
+  onToggle?: (docId: string, taskId: number, checked: boolean) => void,
 ) {
   const boxes = root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
   let id = 0
@@ -316,9 +320,11 @@ export function enableTaskList(
     box.dataset.taskId = String(id)
     box.dataset.taskWired = '1'
     const myId = id
-    box.addEventListener('change', () => {
-      onToggle(docId, myId, box.checked)
-    })
+    if (docId && onToggle) {
+      box.addEventListener('change', () => {
+        onToggle(docId, myId, box.checked)
+      })
+    }
     // The wrapping <li> picks up a class so the row reads as interactive.
     const li = box.closest('li')
     if (li) li.classList.add('task-interactive')

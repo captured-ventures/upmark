@@ -78,13 +78,16 @@
     enhanceCodeCopy(body)
     enhanceFootnotes(body)
 
-    // For MCP-presented docs, make task-list checkboxes interactive and
-    // wire each to the parent via an event.
+    // Task lists are interactive in every doc: clicking a checkbox toggles it
+    // in-session. MCP-presented docs additionally report each toggle back to
+    // the calling LLM via mcpTaskToggle.
     if (mcpId) {
       body.dataset.mcp = '1'
       enableTaskList(body, mcpId, (docId, taskId, checked) => {
         dispatch('mcpTaskToggle', { docId, taskId, checked })
       })
+    } else {
+      enableTaskList(body)
     }
 
     // Word count from the rendered, callout-stripped text.
