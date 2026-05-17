@@ -280,6 +280,8 @@
   .window-controls {
     display: flex;
     align-items: stretch;
+    align-self: stretch;     /* override .cluster.right's align-items: center
+                                so we fill the topbar's 40px height */
     margin-left: 8px;
   }
   .win-ctrl {
