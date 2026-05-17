@@ -217,9 +217,34 @@ func preprocessMath(src []byte) []byte {
 }
 
 var (
-	imgSrcRE = regexp.MustCompile(`(<img\b[^>]*\bsrc=")([^"]+)(")`)
-	aHrefRE  = regexp.MustCompile(`(<a\b[^>]*\bhref=")([^"]+)(")`)
+	imgSrcRE       = regexp.MustCompile(`(<img\b[^>]*\bsrc=")([^"]+)(")`)
+	aHrefRE        = regexp.MustCompile(`(<a\b[^>]*\bhref=")([^"]+)(")`)
+	sourceSrcsetRE = regexp.MustCompile(`(<source\b[^>]*\bsrcset=")([^"]+)(")`)
+	imgSrcsetRE    = regexp.MustCompile(`(<img\b[^>]*\bsrcset=")([^"]+)(")`)
 )
+
+// rewriteSrcset rewrites each URL inside a srcset attribute. srcset format is
+// a comma-separated list of "url descriptor" entries (descriptor is optional —
+// e.g. "img.svg", "img.png 2x", "img.png 800w"). Only the URL portion gets
+// rewritten; the density/width descriptor passes through unchanged.
+func rewriteSrcset(srcset string, rewrite func(string) string) string {
+	parts := strings.Split(srcset, ",")
+	for i, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" {
+			continue
+		}
+		// First whitespace-separated token is the URL; the rest (if any) is
+		// the descriptor — keep it verbatim.
+		sp := strings.IndexAny(trimmed, " \t")
+		if sp < 0 {
+			parts[i] = rewrite(trimmed)
+		} else {
+			parts[i] = rewrite(trimmed[:sp]) + trimmed[sp:]
+		}
+	}
+	return strings.Join(parts, ", ")
+}
 
 func rewriteAssetURLs(htmlStr, base string) string {
 	if base == "" {
@@ -269,6 +294,17 @@ func rewriteAssetURLs(htmlStr, base string) string {
 			return m
 		}
 		return parts[1] + rewrite(href) + parts[3]
+	})
+	// <picture><source srcset="..."> + the responsive <img srcset="..."> form.
+	// Without this rewrite, dark/light SVG wordmarks in READMEs fail because
+	// the matching <source> URL stays bare and never falls back to <img>.
+	htmlStr = sourceSrcsetRE.ReplaceAllStringFunc(htmlStr, func(m string) string {
+		parts := sourceSrcsetRE.FindStringSubmatch(m)
+		return parts[1] + rewriteSrcset(parts[2], rewrite) + parts[3]
+	})
+	htmlStr = imgSrcsetRE.ReplaceAllStringFunc(htmlStr, func(m string) string {
+		parts := imgSrcsetRE.FindStringSubmatch(m)
+		return parts[1] + rewriteSrcset(parts[2], rewrite) + parts[3]
 	})
 	return htmlStr
 }
