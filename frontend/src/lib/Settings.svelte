@@ -118,6 +118,127 @@
       dispatch('setMCPPort', n)
     }
   }
+
+  // ─── MCP client setup ───
+  // Groups clients by the actual snippet shape they accept. Four clients
+  // (Cursor / Cline / Warp / Gemini CLI) take the identical mcpServers.url
+  // JSON, so they collapse into one "Most" entry that lists per-client paths
+  // below the shared snippet. The other four each have a quirk that requires
+  // a distinct snippet (different top-level key, different key for the URL,
+  // YAML, or TOML).
+  //
+  // Re-verify each format at PR time against the linked provider docs —
+  // config schemas churn.
+  type ClientId = 'common' | 'vscode' | 'continue' | 'windsurf' | 'codex'
+
+  type ClientTarget = {
+    name: string
+    where: string        // human-readable path or "where to paste"
+    docsURL: string
+  }
+
+  type ClientInfo = {
+    id: ClientId
+    label: string
+    format: 'json' | 'toml' | 'yaml'
+    targets: ClientTarget[]  // 1+ clients that accept this snippet
+    snippet: (url: string) => string
+  }
+
+  const clients: ClientInfo[] = [
+    {
+      id: 'common',
+      label: 'Most',
+      format: 'json',
+      targets: [
+        { name: 'Cursor',     where: '.cursor/mcp.json  (or ~/.cursor/mcp.json)', docsURL: 'https://docs.cursor.com' },
+        { name: 'Cline',      where: 'MCP Servers icon → Configure',              docsURL: 'https://docs.cline.bot/mcp/adding-and-configuring-servers' },
+        { name: 'Warp',       where: 'Warp Drive → MCP Servers → + Add',           docsURL: 'https://docs.warp.dev/agent-platform/capabilities/mcp/' },
+        { name: 'Gemini CLI', where: '~/.gemini/settings.json',                    docsURL: 'https://geminicli.com/docs/tools/mcp-server/' },
+      ],
+      snippet: (url) => `{
+  "mcpServers": {
+    "upmark": {
+      "url": "${url}"
+    }
+  }
+}`,
+    },
+    {
+      id: 'vscode',
+      label: 'VS Code',
+      format: 'json',
+      targets: [
+        { name: 'VS Code', where: '.vscode/mcp.json  (or user settings.json under "mcp")', docsURL: 'https://code.visualstudio.com/docs/copilot/reference/mcp-configuration' },
+      ],
+      snippet: (url) => `{
+  "servers": {
+    "upmark": {
+      "type": "sse",
+      "url": "${url}"
+    }
+  }
+}`,
+    },
+    {
+      id: 'continue',
+      label: 'Continue',
+      format: 'yaml',
+      targets: [
+        { name: 'Continue.dev', where: '~/.continue/config.yaml  (or .continue/config.yaml per project)', docsURL: 'https://docs.continue.dev/reference' },
+      ],
+      snippet: (url) => `mcpServers:
+  - name: upmark
+    type: sse
+    url: ${url}`,
+    },
+    {
+      id: 'windsurf',
+      label: 'Windsurf',
+      format: 'json',
+      targets: [
+        { name: 'Windsurf', where: '~/.codeium/windsurf/mcp_config.json', docsURL: 'https://docs.windsurf.com' },
+      ],
+      snippet: (url) => `{
+  "mcpServers": {
+    "upmark": {
+      "serverUrl": "${url}"
+    }
+  }
+}`,
+    },
+    {
+      id: 'codex',
+      label: 'Codex',
+      format: 'toml',
+      targets: [
+        { name: 'OpenAI Codex (CLI + IDE)', where: '~/.codex/config.toml  (shared by CLI + IDE extension)', docsURL: 'https://developers.openai.com/codex/mcp' },
+      ],
+      snippet: (url) => `[mcp_servers.upmark]
+url = "${url}"`,
+    },
+  ]
+
+  let selectedClientId: ClientId = 'common'
+  $: selectedClient = clients.find((c) => c.id === selectedClientId) ?? clients[0]
+  $: clientSnippet = selectedClient.snippet(mcpStatus.url)
+
+  let copiedSnippet = false
+  async function copyClientSnippet() {
+    try {
+      await navigator.clipboard.writeText(clientSnippet)
+      copiedSnippet = true
+      setTimeout(() => (copiedSnippet = false), 1500)
+    } catch (e) {
+      console.error('clipboard:', e)
+    }
+  }
+
+  function openDocsURL(url: string) {
+    // Wails webview blocks anchor navigation by default; emit through window.open
+    // so the OS browser handles it.
+    window.open(url, '_blank')
+  }
 </script>
 
 <svelte:window on:keydown={onKey} />
@@ -221,17 +342,50 @@
                 <button class="ghost-btn" on:click={() => dispatch('copyMCPURL')}>copy</button>
               </label>
 
-              <details class="config-snippet">
-                <summary>Claude Desktop configuration</summary>
-                <pre><code>{`{
-  "mcpServers": {
-    "upmark": {
-      "type": "sse",
-      "url": "${mcpStatus.url}"
-    }
-  }
-}`}</code></pre>
-              </details>
+              <h3>connect a client</h3>
+              <p class="hint">
+                Pick the snippet shape your client accepts. Paste it into the
+                listed config file (or its UI), then restart the client.
+              </p>
+
+              <div class="client-picker">
+                {#each clients as c (c.id)}
+                  <button
+                    class="client-btn"
+                    class:active={selectedClientId === c.id}
+                    on:click={() => (selectedClientId = c.id)}
+                  >{c.label}</button>
+                {/each}
+              </div>
+
+              <div class="snippet-frame">
+                <pre><code>{clientSnippet}</code></pre>
+                <button
+                  class="snippet-copy"
+                  class:copied={copiedSnippet}
+                  on:click={copyClientSnippet}
+                >{copiedSnippet ? 'copied' : 'copy'}</button>
+              </div>
+
+              <ul class="target-list">
+                {#each selectedClient.targets as t (t.name)}
+                  <li class="target-row">
+                    <span class="target-name">{t.name}</span>
+                    <span class="target-where">{t.where}</span>
+                    <button
+                      class="target-docs"
+                      on:click={() => openDocsURL(t.docsURL)}
+                      title={t.docsURL}
+                    >docs ↗</button>
+                  </li>
+                {/each}
+              </ul>
+
+              <p class="hint hint-aside">
+                Claude Desktop, Claude Code, Claude.ai, and Zed don't currently
+                support localhost SSE — a stdio bridge is planned (issue
+                <a href="https://github.com/captured-ventures/upmark/issues/9" target="_blank" rel="noopener">#9</a>).
+              </p>
             {/if}
 
           {:else if section === 'about'}
@@ -574,33 +728,122 @@
   }
   .ghost-btn:hover { background: var(--accent-soft); }
 
-  .config-snippet {
-    margin-top: 16px;
+  /* ─── client picker + snippet panel ─── */
+  .client-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .client-btn {
+    padding: 5px 11px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--fg-muted);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    transition: color 120ms, border-color 120ms, background 120ms;
+  }
+  .client-btn:hover {
+    color: var(--fg);
+    border-color: var(--rule-strong);
+  }
+  .client-btn.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .snippet-frame {
+    position: relative;
     border: 1px solid var(--rule);
     border-radius: 4px;
     overflow: hidden;
-  }
-  .config-snippet summary {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-family: var(--font-sans);
-    font-size: 11px;
-    color: var(--fg-muted);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    list-style: none;
-  }
-  .config-snippet summary::-webkit-details-marker { display: none; }
-  .config-snippet[open] summary { border-bottom: 1px solid var(--rule); }
-  .config-snippet pre {
-    margin: 0;
-    padding: 10px 14px;
     background: var(--bg-elev);
+  }
+  .snippet-frame pre {
+    margin: 0;
+    padding: 12px 16px;
     font-family: var(--font-mono);
     font-size: 11.5px;
     line-height: 1.5;
     color: var(--fg);
     overflow-x: auto;
+  }
+  .snippet-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 3px 9px;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    color: var(--fg-muted);
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    transition: color 120ms, border-color 120ms, background 120ms;
+  }
+  .snippet-copy:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .snippet-copy.copied {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* ─── target list (where to paste, per client) ─── */
+  .target-list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--rule);
+  }
+  .target-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-sans);
+    font-size: 12px;
+  }
+  .target-name {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .target-where {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .target-docs {
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    padding: 2px 6px;
+    transition: color 120ms;
+  }
+  .target-docs:hover { color: var(--accent); }
+
+  .hint-aside {
+    margin-top: 14px;
+    font-size: 12px;
+  }
+  .hint-aside a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
   }
 
   /* ─── about ─── */
