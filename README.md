@@ -1,6 +1,9 @@
 <div align="center">
 
-# *upmark*
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/wordmark-dark.svg">
+  <img alt="upmark" src="docs/wordmark-light.svg" width="320">
+</picture>
 
 **a reading tool for markdown**
 
