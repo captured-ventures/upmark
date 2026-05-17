@@ -134,6 +134,10 @@ jobs:
     name: Create GitHub Release
     needs: build
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    # Hoisted to job level so the dispatch step's `if:` can read env.* — GHA
+    # evaluates step-level `if:` before that step's own `env:` is applied.
+    env:
+      UPMARK_RUN_DISPATCH_TOKEN: ${{ secrets.UPMARK_RUN_DISPATCH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -153,3 +157,31 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+
+      # Notify the sibling marketing site (captured-ventures/upmark.run) that
+      # a new release shipped, so its build picks up the fresh download URLs
+      # + sha256s baked in by scripts/fetch-release.mjs.
+      #
+      # Auth: fine-scoped PAT with Contents: write on captured-ventures/upmark.run,
+      # stored as repo secret UPMARK_RUN_DISPATCH_TOKEN. The default GITHUB_TOKEN
+      # can't cross repository boundaries.
+      #
+      # Gates:
+      #   - draft / prerelease: forced false above; this step only reaches here
+      #     if the release was actually published.
+      #   - base_ref == main: rejects tag pushes from feature branches.
+      #   - secret presence: skips with a warning if UPMARK_RUN_DISPATCH_TOKEN
+      #     isn't set, so a missing PAT never fails the release itself.
+      - name: Notify upmark.run of new release
+        if: ${{ github.event.base_ref == 'refs/heads/main' && env.UPMARK_RUN_DISPATCH_TOKEN != '' }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.UPMARK_RUN_DISPATCH_TOKEN }}
+          repository: captured-ventures/upmark.run
+          event-type: upmark-released
+          client-payload: '{"tag": "${{ github.ref_name }}", "version": "${{ github.ref_name }}"}'
+
+      - name: Warn if dispatch token missing
+        if: ${{ env.UPMARK_RUN_DISPATCH_TOKEN == '' }}
+        run: |
+          echo "::warning::UPMARK_RUN_DISPATCH_TOKEN not set — skipping upmark.run rebuild dispatch. Set the secret to enable automatic site rebuilds."
