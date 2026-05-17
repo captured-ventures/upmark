@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows/amd64
+            ext: exe
+            arch: amd64
+            artifact_name: upmark-windows-amd64
+          - os: macos-latest
+            platform: darwin/universal
+            ext: zip
+            arch: universal
+            artifact_name: upmark-macos-universal
+          - os: ubuntu-latest
+            platform: linux/amd64
+            ext: tar.gz
+            arch: amd64
+            artifact_name: upmark-linux-amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build with Wails
+        uses: dAppServer/wails-build-action@v2.2
+        with:
+          build-name: upmark
+          build-platform: ${{ matrix.platform }}
+          package: true
+          nsis: ${{ matrix.os == 'windows-latest' }}
+          go-version: '1.23'
+          node-version: '20'
+
+      - name: Stage Windows artifacts
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp build/bin/upmark.exe "dist/upmark-${{ steps.version.outputs.version }}-windows-amd64.exe"
+          if [ -f build/bin/upmark-amd64-installer.exe ]; then
+            cp build/bin/upmark-amd64-installer.exe "dist/upmark-${{ steps.version.outputs.version }}-windows-amd64-installer.exe"
+          fi
+
+      - name: Stage macOS artifacts
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cd build/bin
+          if [ -d upmark.app ]; then
+            zip -r "../../dist/upmark-${{ steps.version.outputs.version }}-macos-universal.zip" upmark.app
+          fi
+
+      - name: Stage Linux artifacts
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cd build/bin
+          tar -czf "../../dist/upmark-${{ steps.version.outputs.version }}-linux-amd64.tar.gz" upmark
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List staged files
+        run: ls -lah dist/
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false

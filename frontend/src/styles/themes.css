@@ -1,0 +1,635 @@
+/* ═════════════════════════════════════════════════════════════════════════
+   THEME PACK — 12 themes, organized roughly from restrained → playful.
+
+   Each theme declares its color variables and optionally remaps the typeface
+   stack vars (--font-serif / --font-sans / --font-mono). A few themes add
+   structural overrides (filters, scan lines, drop caps) via additional
+   selectors.
+
+   Variables that themes MAY override:
+     --bg, --bg-elev, --paper-tint, --fg, --fg-muted, --fg-subtle,
+     --rule, --rule-strong, --accent, --accent-soft, --hover,
+     --font-serif, --font-sans, --font-mono
+   ═════════════════════════════════════════════════════════════════════════ */
+
+
+/* ───── 1. editorial (default) ──────────────────────────────────────────── */
+:root,
+[data-theme="editorial"] {
+  --bg: #faf8f3;
+  --bg-elev: #f3efe6;
+  --paper-tint: #f1ebdb;
+  --fg: #1a1a1c;
+  --fg-muted: #7c7568;
+  --fg-subtle: #a8a094;
+  --rule: rgba(26, 26, 28, 0.10);
+  --rule-strong: rgba(26, 26, 28, 0.18);
+  --accent: #a8451c;
+  --accent-soft: rgba(168, 69, 28, 0.08);
+  --hover: rgba(26, 26, 28, 0.04);
+  --font-serif: "Newsreader Variable", "Newsreader", Georgia, serif;
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root,
+  [data-theme="editorial"] {
+    --bg: #1a1816;
+    --bg-elev: #22201d;
+    --paper-tint: #2a2622;
+    --fg: #e8e2d5;
+    --fg-muted: #9e978a;
+    --fg-subtle: #5e584f;
+    --rule: rgba(232, 226, 213, 0.10);
+    --rule-strong: rgba(232, 226, 213, 0.18);
+    --accent: #d4865a;
+    --accent-soft: rgba(212, 134, 90, 0.10);
+    --hover: rgba(232, 226, 213, 0.05);
+  }
+}
+
+
+/* ───── 2. broadsheet ───────────────────────────────────────────────────── */
+[data-theme="broadsheet"] {
+  --bg: #fefcf7;
+  --bg-elev: #f7f1e1;
+  --paper-tint: #f1e9d2;
+  --fg: #14110d;
+  --fg-muted: #5c574c;
+  --fg-subtle: #948e80;
+  --rule: rgba(20, 17, 13, 0.14);
+  --rule-strong: rgba(20, 17, 13, 0.26);
+  --accent: #6b3a16;
+  --accent-soft: rgba(107, 58, 22, 0.08);
+  --hover: rgba(20, 17, 13, 0.05);
+  --font-sans: "Newsreader Variable", "Newsreader", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="broadsheet"] {
+    --bg: #1c1916;
+    --bg-elev: #25211d;
+    --paper-tint: #2e2925;
+    --fg: #f0eadc;
+    --fg-muted: #a8a193;
+    --fg-subtle: #6a6457;
+    --rule: rgba(240, 234, 220, 0.10);
+    --rule-strong: rgba(240, 234, 220, 0.20);
+    --accent: #c98850;
+    --accent-soft: rgba(201, 136, 80, 0.10);
+    --hover: rgba(240, 234, 220, 0.05);
+  }
+}
+
+
+/* ───── 3. terminal ────────────────────────────────────────────────────── */
+[data-theme="terminal"] {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --bg-elev: #161b22;
+  --paper-tint: #1c2330;
+  --fg: #cdd9e5;
+  --fg-muted: #768390;
+  --fg-subtle: #545d68;
+  --rule: rgba(205, 217, 229, 0.10);
+  --rule-strong: rgba(205, 217, 229, 0.22);
+  --accent: #f0883e;
+  --accent-soft: rgba(240, 136, 62, 0.10);
+  --hover: rgba(205, 217, 229, 0.05);
+  --font-serif: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --font-sans: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+}
+
+
+/* ───── 4. manuscript ───────────────────────────────────────────────────── */
+/* Illuminated parchment. EB Garamond, deep sepia, drop caps, paper grain. */
+[data-theme="manuscript"] {
+  --bg: #f4e8d4;
+  --bg-elev: #ebdec5;
+  --paper-tint: #e2d4b4;
+  --fg: #2c1f12;
+  --fg-muted: #6a543c;
+  --fg-subtle: #9b8567;
+  --rule: rgba(44, 31, 18, 0.16);
+  --rule-strong: rgba(44, 31, 18, 0.28);
+  --accent: #8b1e1e;
+  --accent-soft: rgba(139, 30, 30, 0.10);
+  --hover: rgba(44, 31, 18, 0.05);
+  --font-serif: "EB Garamond", "Newsreader Variable", Georgia, serif;
+  --font-sans: "EB Garamond", "Newsreader Variable", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+/* Subtle paper grain via an SVG noise overlay */
+[data-theme="manuscript"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.1 0 0 0 0 0 0 0 0 0.18 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+/* Drop cap on the first body paragraph — `p:first-of-type` direct child of
+   .markdown-body works whether the byline sits before or after the h1. */
+[data-theme="manuscript"] .markdown-body > p:first-of-type::first-letter {
+  font-size: 3.6em;
+  font-weight: 500;
+  float: left;
+  line-height: 0.9;
+  padding: 0.05em 0.1em 0 0;
+  color: var(--accent);
+  font-family: "EB Garamond", serif;
+}
+
+
+/* ───── 5. brutalist ────────────────────────────────────────────────────── */
+/* Pure black/white, oversized type, sharp edges, no animations. */
+[data-theme="brutalist"] {
+  --bg: #ffffff;
+  --bg-elev: #f0f0f0;
+  --paper-tint: #e8e8e8;
+  --fg: #000000;
+  --fg-muted: #2a2a2a;
+  --fg-subtle: #888888;
+  --rule: #000000;
+  --rule-strong: #000000;
+  --accent: #ff0033;
+  --accent-soft: rgba(255, 0, 51, 0.12);
+  --hover: rgba(0, 0, 0, 0.08);
+  --font-serif: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="brutalist"] {
+    --bg: #000000;
+    --bg-elev: #1a1a1a;
+    --paper-tint: #161616;
+    --fg: #ffffff;
+    --fg-muted: #cccccc;
+    --fg-subtle: #888888;
+    --rule: #ffffff;
+    --rule-strong: #ffffff;
+    --accent: #ffea00;
+    --accent-soft: rgba(255, 234, 0, 0.12);
+    --hover: rgba(255, 255, 255, 0.06);
+  }
+}
+[data-theme="brutalist"] {
+  --reading-width: 70ch;
+}
+/* Force square corners + slab borders everywhere */
+[data-theme="brutalist"] *,
+[data-theme="brutalist"] *::before,
+[data-theme="brutalist"] *::after {
+  border-radius: 0 !important;
+}
+[data-theme="brutalist"] .markdown-body h1,
+[data-theme="brutalist"] .markdown-body h2,
+[data-theme="brutalist"] .markdown-body h3 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+[data-theme="brutalist"] .markdown-body h1 { font-size: 3em; }
+[data-theme="brutalist"] .markdown-body h2 { font-size: 1.9em; border-bottom: 4px solid var(--fg); padding-bottom: 0.2em; }
+[data-theme="brutalist"] .markdown-body h2::before,
+[data-theme="brutalist"] .markdown-body h3::before { display: none; }
+[data-theme="brutalist"] .markdown-body blockquote {
+  border-left: 6px solid var(--fg);
+  font-style: normal;
+}
+
+
+/* ───── 6. arcade ──────────────────────────────────────────────────────── */
+/* Synthwave neon: pink + cyan on deep purple-black. VT323 mono, glow + scan lines. */
+[data-theme="arcade"] {
+  color-scheme: dark;
+  --bg: #0a0118;
+  --bg-elev: #160534;
+  --paper-tint: #1f0a45;
+  --fg: #f8f8ff;
+  --fg-muted: #b794f4;
+  --fg-subtle: #7c5fae;
+  --rule: rgba(255, 16, 240, 0.18);
+  --rule-strong: rgba(255, 16, 240, 0.45);
+  --accent: #ff10f0;
+  --accent-soft: rgba(255, 16, 240, 0.14);
+  --hover: rgba(0, 255, 255, 0.10);
+  --font-serif: "VT323", "JetBrains Mono", monospace;
+  --font-sans: "VT323", "JetBrains Mono", monospace;
+  --font-mono: "VT323", "JetBrains Mono", monospace;
+}
+/* CRT scan lines overlay */
+[data-theme="arcade"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.22) 2px,
+    rgba(0, 0, 0, 0.22) 3px
+  );
+  mix-blend-mode: multiply;
+}
+/* Neon glow on headings + links + accents */
+[data-theme="arcade"] .markdown-body h1,
+[data-theme="arcade"] .markdown-body h2,
+[data-theme="arcade"] .markdown-body h3 {
+  color: #00ffff;
+  text-shadow:
+    0 0 6px #00ffff,
+    0 0 14px rgba(0, 255, 255, 0.6),
+    0 0 28px rgba(0, 255, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+[data-theme="arcade"] .markdown-body a {
+  color: #ff10f0;
+  text-shadow: 0 0 6px rgba(255, 16, 240, 0.8);
+}
+[data-theme="arcade"] .markdown-body strong { color: #ffea00; text-shadow: 0 0 4px rgba(255, 234, 0, 0.6); }
+[data-theme="arcade"] .markdown-body code,
+[data-theme="arcade"] .markdown-body pre {
+  border-color: rgba(0, 255, 255, 0.3);
+  background: rgba(0, 255, 255, 0.04);
+}
+[data-theme="arcade"] {
+  font-size: 16px;
+}
+
+
+/* ───── 7. pastoral ────────────────────────────────────────────────────── */
+/* Soft cream + sage + dusty rose. Lora serif. Rounded everywhere. */
+[data-theme="pastoral"] {
+  --bg: #faf6f0;
+  --bg-elev: #f2ece1;
+  --paper-tint: #ede5d6;
+  --fg: #3a3530;
+  --fg-muted: #8a7a6a;
+  --fg-subtle: #b8a896;
+  --rule: rgba(58, 53, 48, 0.10);
+  --rule-strong: rgba(58, 53, 48, 0.20);
+  --accent: #6b8e6f;
+  --accent-soft: rgba(107, 142, 111, 0.12);
+  --hover: rgba(58, 53, 48, 0.04);
+  --font-serif: "Lora Variable", "Lora", Georgia, serif;
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+/* Softer corners on framed elements */
+[data-theme="pastoral"] .markdown-body pre,
+[data-theme="pastoral"] .markdown-body code,
+[data-theme="pastoral"] .markdown-body img {
+  border-radius: 10px;
+}
+[data-theme="pastoral"] .markdown-body blockquote {
+  background: var(--accent-soft);
+  border-radius: 0 12px 12px 0;
+  padding: 12px 18px;
+}
+
+
+/* ───── 8. architect ───────────────────────────────────────────────────── */
+/* Blueprint feel: cool gray paper, faint grid, Prussian blue, IBM Plex Mono. */
+[data-theme="architect"] {
+  --bg: #eef2f5;
+  --bg-elev: #e2e8ee;
+  --paper-tint: #dae2ea;
+  --fg: #1d3a52;
+  --fg-muted: #4a6680;
+  --fg-subtle: #8aa0b8;
+  --rule: rgba(29, 58, 82, 0.16);
+  --rule-strong: rgba(29, 58, 82, 0.30);
+  --accent: #1d3a52;
+  --accent-soft: rgba(29, 58, 82, 0.10);
+  --hover: rgba(29, 58, 82, 0.05);
+  --font-serif: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-sans: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="architect"] {
+    --bg: #0b1822;
+    --bg-elev: #122334;
+    --paper-tint: #1a2d40;
+    --fg: #b8d4ee;
+    --fg-muted: #6e89a4;
+    --fg-subtle: #4a607a;
+    --rule: rgba(184, 212, 238, 0.16);
+    --rule-strong: rgba(184, 212, 238, 0.30);
+    --accent: #6eb8f0;
+    --accent-soft: rgba(110, 184, 240, 0.10);
+    --hover: rgba(184, 212, 238, 0.05);
+  }
+}
+/* Faint blueprint grid behind everything */
+[data-theme="architect"] body {
+  background-image:
+    linear-gradient(to right,  var(--rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0;
+}
+[data-theme="architect"] .markdown-body h1,
+[data-theme="architect"] .markdown-body h2,
+[data-theme="architect"] .markdown-body h3 {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+
+/* ───── 9. vapor ───────────────────────────────────────────────────────── */
+/* Vaporwave dreamscape: pink/purple gradient, Caveat handwriting headings,
+   soft glow. */
+[data-theme="vapor"] {
+  color-scheme: dark;
+  --bg: #1a0b2e;
+  --bg-elev: #2a1645;
+  --paper-tint: #38205a;
+  --fg: #f6d8f5;
+  --fg-muted: #b794f4;
+  --fg-subtle: #7c5fae;
+  --rule: rgba(246, 198, 234, 0.18);
+  --rule-strong: rgba(246, 198, 234, 0.36);
+  --accent: #ff61d8;
+  --accent-soft: rgba(255, 97, 216, 0.12);
+  --hover: rgba(246, 198, 234, 0.06);
+  --font-serif: "Caveat", "Newsreader Variable", cursive;
+  --font-sans: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+[data-theme="vapor"] body {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 97, 216, 0.22), transparent 42%),
+    radial-gradient(circle at 84% 80%, rgba(110, 184, 240, 0.20), transparent 42%),
+    var(--bg);
+}
+[data-theme="vapor"] .markdown-body h1,
+[data-theme="vapor"] .markdown-body h2,
+[data-theme="vapor"] .markdown-body h3 {
+  font-family: "Caveat", cursive;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #ffffff;
+  text-shadow:
+    0 0 4px rgba(255, 97, 216, 0.7),
+    0 0 16px rgba(110, 184, 240, 0.4);
+}
+[data-theme="vapor"] .markdown-body h1 { font-size: 3.2em; }
+[data-theme="vapor"] .markdown-body h2 { font-size: 2.4em; }
+[data-theme="vapor"] .markdown-body h3 { font-size: 1.8em; }
+[data-theme="vapor"] .markdown-body a {
+  color: #6eb8f0;
+}
+
+
+/* ───── 10. typewriter ─────────────────────────────────────────────────── */
+/* Courier Prime on warm cream paper. Ribbon-red accent. Slight ink punch. */
+[data-theme="typewriter"] {
+  --bg: #f4f0e6;
+  --bg-elev: #eae4d4;
+  --paper-tint: #e3dcc6;
+  --fg: #2a2620;
+  --fg-muted: #6a625a;
+  --fg-subtle: #a09a8c;
+  --rule: rgba(42, 38, 32, 0.16);
+  --rule-strong: rgba(42, 38, 32, 0.28);
+  --accent: #b71c1c;
+  --accent-soft: rgba(183, 28, 28, 0.10);
+  --hover: rgba(42, 38, 32, 0.05);
+  --font-serif: "Courier Prime", "JetBrains Mono", monospace;
+  --font-sans: "Courier Prime", "JetBrains Mono", monospace;
+  --font-mono: "Courier Prime", "JetBrains Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="typewriter"] {
+    --bg: #1c1a16;
+    --bg-elev: #25221c;
+    --paper-tint: #2e2a22;
+    --fg: #e8e2d2;
+    --fg-muted: #a8a190;
+    --fg-subtle: #6a6457;
+    --rule: rgba(232, 226, 210, 0.14);
+    --rule-strong: rgba(232, 226, 210, 0.28);
+    --accent: #ff6464;
+    --accent-soft: rgba(255, 100, 100, 0.10);
+    --hover: rgba(232, 226, 210, 0.05);
+  }
+}
+/* Inked-into-paper text shadow for headings */
+[data-theme="typewriter"] .markdown-body h1,
+[data-theme="typewriter"] .markdown-body h2,
+[data-theme="typewriter"] .markdown-body h3 {
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.18);
+  letter-spacing: 0.01em;
+  font-weight: 700;
+}
+
+
+/* ───── 11. midnight ────────────────────────────────────────────────────── */
+/* Deep navy library, warm cream text, gold accent, Lora serif. */
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0d1b2a;
+  --bg-elev: #15263a;
+  --paper-tint: #1e314a;
+  --fg: #f0e6d2;
+  --fg-muted: #b8a888;
+  --fg-subtle: #7a6e58;
+  --rule: rgba(240, 230, 210, 0.10);
+  --rule-strong: rgba(240, 230, 210, 0.22);
+  --accent: #d4af37;
+  --accent-soft: rgba(212, 175, 55, 0.10);
+  --hover: rgba(240, 230, 210, 0.05);
+  --font-serif: "Lora Variable", "Lora", Georgia, serif;
+  --font-sans: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+
+/* ───── 13. newsprint ───────────────────────────────────────────────────── */
+/* Daily-paper grit: gray newsprint paper, heavy sans headlines over a
+   Newsreader body, ink-press red accent, faint halftone dot overlay. */
+[data-theme="newsprint"] {
+  --bg: #e8e4dc;
+  --bg-elev: #ddd9d0;
+  --paper-tint: #d2cdc2;
+  --fg: #0a0a0a;
+  --fg-muted: #4a4640;
+  --fg-subtle: #8a8580;
+  --rule: rgba(10, 10, 10, 0.18);
+  --rule-strong: rgba(10, 10, 10, 0.42);
+  --accent: #c0312c;
+  --accent-soft: rgba(192, 49, 44, 0.10);
+  --hover: rgba(10, 10, 10, 0.05);
+  --font-serif: "Newsreader Variable", "Newsreader", Georgia, serif;
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="newsprint"] {
+    --bg: #1c1a16;
+    --bg-elev: #25221d;
+    --paper-tint: #2c2820;
+    --fg: #ece5d6;
+    --fg-muted: #a8a190;
+    --fg-subtle: #6a6457;
+    --rule: rgba(236, 229, 214, 0.14);
+    --rule-strong: rgba(236, 229, 214, 0.34);
+    --accent: #ef5a52;
+    --accent-soft: rgba(239, 90, 82, 0.10);
+    --hover: rgba(236, 229, 214, 0.05);
+  }
+}
+/* Halftone dots laid over everything — newsprint texture */
+[data-theme="newsprint"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  background-image: radial-gradient(circle, rgba(10, 10, 10, 0.7) 0.4px, transparent 1px);
+  background-size: 3px 3px;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="newsprint"] body::before {
+    opacity: 0.18;
+    mix-blend-mode: screen;
+    background-image: radial-gradient(circle, rgba(236, 229, 214, 0.5) 0.4px, transparent 1px);
+  }
+}
+/* Headlines: heavy sans, all-caps masthead-style on h1, slab rules above h2 */
+[data-theme="newsprint"] .markdown-body h1 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  line-height: 0.95;
+  border-bottom: 4px solid var(--fg);
+  padding-bottom: 0.3em;
+  font-size: 2.6em;
+}
+[data-theme="newsprint"] .markdown-body h2 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-top: 2px solid var(--fg);
+  padding-top: 0.45em;
+  margin-top: 2em;
+  text-transform: none;
+}
+[data-theme="newsprint"] .markdown-body h2::before { display: none; }
+[data-theme="newsprint"] .markdown-body h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.95em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 1.6em;
+  color: var(--fg);
+}
+[data-theme="newsprint"] .markdown-body h3::before { display: none; }
+/* Drop cap on the lede paragraph — direct-child p:first-of-type works whether
+   the byline sits before or after the doc's h1. */
+[data-theme="newsprint"] .markdown-body > p:first-of-type::first-letter {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 3.4em;
+  float: left;
+  line-height: 0.85;
+  padding: 0.04em 0.1em 0 0;
+  color: var(--fg);
+}
+/* Pull-quote treatment on blockquote */
+[data-theme="newsprint"] .markdown-body blockquote {
+  border-left: 4px solid var(--accent);
+  padding-left: 1em;
+  font-style: italic;
+  font-size: 1.05em;
+}
+/* Masthead treatment: empty-state logo + topbar wordmark match the doc's
+   heavy-sans headlines. !important is required to defeat Svelte 4's
+   deliberate doubled-hash class on component-scoped rules
+   (.svelte-xxx.svelte-xxx ties our specificity and wins by source order). */
+[data-theme="newsprint"] .empty .logo {
+  font-family: var(--font-sans) !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: -0.04em !important;
+  font-variation-settings: normal !important;
+}
+[data-theme="newsprint"] .topbar .wordmark {
+  font-family: var(--font-sans) !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: -0.02em !important;
+  font-variation-settings: normal !important;
+}
+
+
+/* ───── 12. gameboy ─────────────────────────────────────────────────────── */
+/* Original Game Boy palette: 4 greens, pixel font, hard scan lines, no
+   smoothing. Pure flex. */
+[data-theme="gameboy"] {
+  --bg: #c4cfa1;
+  --bg-elev: #8aa572;
+  --paper-tint: #768b5d;
+  --fg: #2a3a1c;
+  --fg-muted: #4a5a32;
+  --fg-subtle: #5a6c42;
+  --rule: rgba(42, 58, 28, 0.30);
+  --rule-strong: rgba(42, 58, 28, 0.55);
+  --accent: #2a3a1c;
+  --accent-soft: rgba(42, 58, 28, 0.16);
+  --hover: rgba(42, 58, 28, 0.08);
+  --font-serif: "VT323", "JetBrains Mono", monospace;
+  --font-sans: "VT323", "JetBrains Mono", monospace;
+  --font-mono: "VT323", "JetBrains Mono", monospace;
+}
+[data-theme="gameboy"] {
+  font-size: 16px;
+  /* Pixelate everything: no font smoothing, no antialiasing on images */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  image-rendering: pixelated;
+}
+/* Hard scan lines and a faint LCD vignette */
+[data-theme="gameboy"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    repeating-linear-gradient(0deg, transparent 0, transparent 2px,
+                              rgba(42, 58, 28, 0.15) 2px,
+                              rgba(42, 58, 28, 0.15) 3px),
+    radial-gradient(ellipse at center, transparent 50%, rgba(42, 58, 28, 0.20) 100%);
+}
+[data-theme="gameboy"] .markdown-body h1,
+[data-theme="gameboy"] .markdown-body h2,
+[data-theme="gameboy"] .markdown-body h3 {
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+[data-theme="gameboy"] .markdown-body img {
+  filter: grayscale(1) contrast(2);
+  image-rendering: pixelated;
+}
+[data-theme="gameboy"] *,
+[data-theme="gameboy"] *::before,
+[data-theme="gameboy"] *::after {
+  border-radius: 0 !important;
+}

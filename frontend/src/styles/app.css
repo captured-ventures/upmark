@@ -1,0 +1,123 @@
+:root {
+  color-scheme: light dark;
+
+  --code-bg:      var(--bg-elev);
+  --code-border:  var(--rule);
+  --blockquote-color: var(--accent);
+
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--fg);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+button:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Sidebar item buttons (TOC entries, file rows, folder names, recent rows)
+   already telegraph their state through hover/active styles. The default
+   :focus-visible outline lingers visibly after a mouse click in webview2,
+   which reads as a stuck selection. Suppress it here; keyboard users still
+   get hover-equivalent feedback because we apply that same color shift on
+   focus-visible. */
+.sidebar button:focus,
+.sidebar button:focus-visible,
+.empty button:focus,
+.empty button:focus-visible {
+  outline: none;
+}
+.sidebar button:focus-visible {
+  color: var(--fg);
+}
+
+a { color: var(--accent); text-decoration: none; }
+
+/* Frameless drag region. Wails reads --wails-draggable from CSS. */
+.drag { --wails-draggable: drag; -webkit-app-region: drag; }
+.no-drag { --wails-draggable: no-drag; -webkit-app-region: no-drag; }
+
+/* App layout shell */
+.shell {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* When the frameless window is maximized, Windows expands it ~8px beyond every
+   screen edge. That clips content visually at the edges. Pad #app to keep
+   everything safely inside the visible area. */
+html.is-maximized #app {
+  padding: 8px;
+}
+html.is-maximized body { background: transparent; }
+
+.main-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+/* Scrollbars — thin, only-on-hover */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+*:hover::-webkit-scrollbar-thumb {
+  background-color: var(--rule-strong);
+  background-clip: padding-box;
+}
+
+/* Print */
+@media print {
+  html, body, #app {
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .topbar, .sidebar, .find, .error-toast, .command-palette { display: none !important; }
+  .markdown-body { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+}
