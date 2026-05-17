@@ -132,7 +132,7 @@
   //
   // Re-verify each format at PR time against the linked provider docs —
   // config schemas churn.
-  type ClientId = 'common' | 'vscode' | 'continue' | 'windsurf' | 'codex'
+  type ClientId = 'common' | 'vscode' | 'continue' | 'windsurf' | 'codex' | 'claude'
 
   type ClientTarget = {
     name: string
@@ -140,12 +140,17 @@
     docsURL: string
   }
 
+  // Most clients accept a paste-this snippet. Claude Desktop is the
+  // odd one out — it installs a .mcpb bundle, so we render numbered
+  // steps instead. installSteps takes precedence over snippet when both
+  // are absent (snippet/format become optional for install-style entries).
   type ClientInfo = {
     id: ClientId
     label: string
-    format: 'json' | 'toml' | 'yaml'
-    targets: ClientTarget[]  // 1+ clients that accept this snippet
-    snippet: (url: string) => string
+    format?: 'json' | 'toml' | 'yaml'
+    targets: ClientTarget[]
+    snippet?: (url: string) => string
+    installSteps?: string[]
   }
 
   const clients: ClientInfo[] = [
@@ -220,11 +225,23 @@
       snippet: (url) => `[mcp_servers.upmark]
 url = "${url}"`,
     },
+    {
+      id: 'claude',
+      label: 'Claude Desktop',
+      targets: [
+        { name: 'Claude Desktop', where: 'Settings → Extensions → Install Extension → pick the .mcpb', docsURL: 'https://github.com/captured-ventures/upmark/releases/latest' },
+      ],
+      installSteps: [
+        'Download upmark.mcpb from the latest GitHub release.',
+        'Open Claude Desktop → Settings → Extensions → Install Extension and pick the file.',
+        'Done — first tool call auto-launches upmark; no config file to edit.',
+      ],
+    },
   ]
 
   let selectedClientId: ClientId = 'common'
   $: selectedClient = clients.find((c) => c.id === selectedClientId) ?? clients[0]
-  $: clientSnippet = selectedClient.snippet(mcpStatus.url)
+  $: clientSnippet = selectedClient.snippet ? selectedClient.snippet(mcpStatus.url) : ''
 
   let copiedSnippet = false
   async function copyClientSnippet() {
@@ -367,8 +384,8 @@ url = "${url}"`,
 
               <h3>connect a client</h3>
               <p class="hint">
-                Pick the snippet shape your client accepts. Paste it into the
-                listed config file (or its UI), then restart the client.
+                Pick your client. Most accept a paste-in snippet; Claude Desktop
+                installs a bundle instead.
               </p>
 
               <div class="client-picker">
@@ -381,14 +398,22 @@ url = "${url}"`,
                 {/each}
               </div>
 
-              <div class="snippet-frame">
-                <pre><code>{clientSnippet}</code></pre>
-                <button
-                  class="snippet-copy"
-                  class:copied={copiedSnippet}
-                  on:click={copyClientSnippet}
-                >{copiedSnippet ? 'copied' : 'copy'}</button>
-              </div>
+              {#if selectedClient.installSteps}
+                <ol class="install-steps">
+                  {#each selectedClient.installSteps as step}
+                    <li>{step}</li>
+                  {/each}
+                </ol>
+              {:else}
+                <div class="snippet-frame">
+                  <pre><code>{clientSnippet}</code></pre>
+                  <button
+                    class="snippet-copy"
+                    class:copied={copiedSnippet}
+                    on:click={copyClientSnippet}
+                  >{copiedSnippet ? 'copied' : 'copy'}</button>
+                </div>
+              {/if}
 
               <ul class="target-list">
                 {#each selectedClient.targets as t (t.name)}
@@ -405,10 +430,9 @@ url = "${url}"`,
               </ul>
 
               <p class="hint hint-aside">
-                Claude Desktop, Claude Code, and Claude.ai don't speak localhost SSE —
-                install the <code>upmark.mcpb</code> bundle from the
-                <a href="https://github.com/captured-ventures/upmark/releases" target="_blank" rel="noopener">GitHub release</a>
-                to bridge them. Zed support is still pending upstream.
+                Claude Code installs the same <code>upmark.mcpb</code> through its
+                own MCP setup; Claude.ai uses the connectors panel. Zed support is
+                still pending upstream.
               </p>
             {/if}
 
@@ -819,6 +843,25 @@ url = "${url}"`,
     background: var(--accent-soft);
   }
 
+  /* ─── install steps (Claude Desktop bundle install) ─── */
+  .install-steps {
+    margin: 0;
+    padding: 12px 16px 12px 32px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--bg-elev);
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--fg);
+  }
+  .install-steps li {
+    padding-left: 4px;
+  }
+  .install-steps li + li {
+    margin-top: 6px;
+  }
+
   /* ─── target list (where to paste, per client) ─── */
   .target-list {
     margin: 10px 0 0;
@@ -872,12 +915,6 @@ url = "${url}"`,
   .hint-aside {
     margin-top: 14px;
     font-size: 12px;
-  }
-  .hint-aside a {
-    color: var(--accent);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    text-decoration-thickness: 1px;
   }
 
   /* ─── about ─── */
