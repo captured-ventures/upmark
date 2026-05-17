@@ -30,3 +30,6 @@ desktop.ini
 
 # Local-only working notes, kickoff/handoff docs, scratch
 local/
+
+# Claude Code working dir (per-session state, scheduled tasks, etc.)
+.claude/
