@@ -49,6 +49,13 @@ type App struct {
 	selfWrites map[string]time.Time
 
 	mcp *MCPManager
+
+	// Focus mode (Phase 11): transient, in-memory only. When active, the
+	// window is sized to fit just the reading column at monitor full height
+	// with the sidebar collapsed. focusSnapshot captures pre-focus geometry
+	// so ExitFocusMode can restore it.
+	focusActive   bool
+	focusSnapshot struct{ x, y, w, h int }
 }
 
 // SetStartupFile is called from main.go after parsing os.Args.
@@ -218,6 +225,56 @@ func (a *App) domReady(ctx context.Context) {
 	// the UI. No work here.
 }
 
+// EnterFocusMode resizes the window to a vertical reading slab: targetWidth
+// pixels wide (the frontend computes this from the current rendered doc
+// column), monitor full height, anchored to top of monitor. Captures the
+// current geometry so ExitFocusMode can restore it. No-op if already active.
+func (a *App) EnterFocusMode(targetWidth int) {
+	if a.focusActive {
+		return
+	}
+	w, h := wailsruntime.WindowGetSize(a.ctx)
+	x, y := wailsruntime.WindowGetPosition(a.ctx)
+	a.focusSnapshot = struct{ x, y, w, h int }{x: x, y: y, w: w, h: h}
+	screenH := currentScreenHeight(a.ctx)
+	if screenH <= 0 {
+		screenH = h
+	}
+	wailsruntime.WindowSetPosition(a.ctx, x, 0)
+	wailsruntime.WindowSetSize(a.ctx, targetWidth, screenH)
+	a.focusActive = true
+}
+
+// ExitFocusMode restores the geometry captured by EnterFocusMode. No-op if
+// not active.
+func (a *App) ExitFocusMode() {
+	if !a.focusActive {
+		return
+	}
+	s := a.focusSnapshot
+	wailsruntime.WindowSetPosition(a.ctx, s.x, s.y)
+	wailsruntime.WindowSetSize(a.ctx, s.w, s.h)
+	a.focusActive = false
+}
+
+func currentScreenHeight(ctx context.Context) int {
+	screens, err := wailsruntime.ScreenGetAll(ctx)
+	if err != nil || len(screens) == 0 {
+		return 0
+	}
+	for _, s := range screens {
+		if s.IsCurrent {
+			return s.Size.Height
+		}
+	}
+	for _, s := range screens {
+		if s.IsPrimary {
+			return s.Size.Height
+		}
+	}
+	return screens[0].Size.Height
+}
+
 // GetStartupOrLastFile returns the path the frontend should open on launch.
 // Priority: CLI-arg / file-association startup file > previously open file.
 // The startup file is consumed (cleared) on read.
@@ -240,12 +297,22 @@ func (a *App) GetStartupOrLastFile() string {
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	width, height := wailsruntime.WindowGetSize(ctx)
-	x, y := wailsruntime.WindowGetPosition(ctx)
-	a.prefs.WindowWidth = width
-	a.prefs.WindowHeight = height
-	a.prefs.WindowX = x
-	a.prefs.WindowY = y
+	// If focus mode is active, persist the pre-focus dims — otherwise next
+	// launch reopens as a tall sliver instead of the user's real window.
+	if a.focusActive {
+		s := a.focusSnapshot
+		a.prefs.WindowWidth = s.w
+		a.prefs.WindowHeight = s.h
+		a.prefs.WindowX = s.x
+		a.prefs.WindowY = s.y
+	} else {
+		width, height := wailsruntime.WindowGetSize(ctx)
+		x, y := wailsruntime.WindowGetPosition(ctx)
+		a.prefs.WindowWidth = width
+		a.prefs.WindowHeight = height
+		a.prefs.WindowX = x
+		a.prefs.WindowY = y
+	}
 	_ = a.prefs.save()
 
 	a.mu.Lock()

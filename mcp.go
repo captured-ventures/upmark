@@ -32,6 +32,10 @@ type MCPDocument struct {
 	Tasks        []MCPTaskState `json:"tasks"`
 	ClosedByUser bool           `json:"closedByUser"`
 	ViewedByUser bool           `json:"viewedByUser"`
+	// Client is the name of the MCP client that presented this doc — captured
+	// from the initialize handshake's clientInfo.name (e.g. "Claude Desktop",
+	// "Cursor"). Empty when the SDK didn't propagate it (rare).
+	Client string `json:"client,omitempty"`
 }
 
 // MCPTaskState is one row of a GFM task list (`- [ ] foo`). IDs are assigned
@@ -186,6 +190,22 @@ func (m *MCPManager) touchActivity() {
 	m.mu.Unlock()
 }
 
+// clientNameFromContext returns the MCP client's name (e.g. "Claude Desktop",
+// "Cursor") for the session bound to ctx, or "" if unavailable. The mcp-go
+// server records clientInfo automatically during the initialize handshake;
+// we just read it back from the session.
+func clientNameFromContext(ctx context.Context) string {
+	session := server.ClientSessionFromContext(ctx)
+	if session == nil {
+		return ""
+	}
+	sci, ok := session.(server.SessionWithClientInfo)
+	if !ok {
+		return ""
+	}
+	return sci.GetClientInfo().Name
+}
+
 // ───── tool registration ─────
 
 func (m *MCPManager) registerTools(s *server.MCPServer) {
@@ -273,6 +293,7 @@ func (m *MCPManager) handlePresent(ctx context.Context, req mcp.CallToolRequest)
 		PresentedAt: time.Now(),
 		UpdatedAt:   time.Now(),
 		Tasks:       extractTasks(content, nil),
+		Client:      clientNameFromContext(ctx),
 	}
 
 	m.mu.Lock()

@@ -29,6 +29,8 @@
     IsFirstLaunch,
     OpenWelcome,
     SetMCPWindowOnPresent,
+    EnterFocusMode,
+    ExitFocusMode,
   } from '../wailsjs/go/main/App'
 
   import TopBar from './lib/TopBar.svelte'
@@ -60,6 +62,12 @@
   let settingsOpen = false
   let errorMsg = ''
   let busy = false
+
+  // Phase 11 — focus mode: hide sidebar, snap window to the current reading
+  // column at monitor full height. Press again, Esc, or palette to exit.
+  // preFocusSidebarOpen captures the user's sidebar state so we can restore it.
+  let focusModeActive = false
+  let preFocusSidebarOpen = true
 
   // Edit mode
   let editing = false
@@ -136,6 +144,31 @@
   function applyReadingVars() {
     document.documentElement.style.setProperty('--reading-width', widthPx[readingWidth])
     document.documentElement.style.setProperty('--reading-size', `${fontSize}px`)
+  }
+
+  async function toggleFocusMode() {
+    if (focusModeActive) {
+      sidebarOpen = preFocusSidebarOpen
+      try { await ExitFocusMode() } catch (e) { console.error(e) }
+      focusModeActive = false
+      return
+    }
+    // Measure the rendered doc width *before* collapsing the sidebar so the
+    // column is captured at its current measure (collapsing first would let
+    // the body briefly grow). Fall back to a sensible default when no doc
+    // is open (empty state has no .markdown-body to measure).
+    const docEl = document.querySelector('.markdown-body') as HTMLElement | null
+    const contentW = docEl ? Math.ceil(docEl.getBoundingClientRect().width) : 720
+    const chromeW = Math.max(0, window.outerWidth - window.innerWidth)
+    preFocusSidebarOpen = sidebarOpen
+    sidebarOpen = false
+    try {
+      await EnterFocusMode(contentW + chromeW)
+      focusModeActive = true
+    } catch (e) {
+      console.error(e)
+      sidebarOpen = preFocusSidebarOpen
+    }
   }
 
   async function setWidth(w: WidthKey) {
@@ -332,6 +365,7 @@
       modified: Date.parse(m.updatedAt) || Date.now(),
       isMCP: true,
       mcpId: m.id,
+      mcpClient: m.client,
     }
   }
 
@@ -408,12 +442,14 @@
     if (mod && k === 'k') { e.preventDefault(); paletteOpen = !paletteOpen; return }
     if (mod && k === 'b') { e.preventDefault(); sidebarOpen = !sidebarOpen; return }
     if (mod && k === 'w') { e.preventDefault(); if (doc) closeDoc(); return }
+    if (mod && e.shiftKey && k === 'f') { e.preventDefault(); toggleFocusMode(); return }
     if (mod && k === 'f') { e.preventDefault(); if (doc) findOpen = !findOpen; return }
     if (mod && k === 'p') { e.preventDefault(); window.print(); return }
     if (mod && k === 'e') { e.preventDefault(); toggleEdit(); return }
     if (mod && k === 's') { e.preventDefault(); saveNow(); return }
     if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); goBack(); return }
     if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); goForward(); return }
+    if (e.key === 'Escape' && focusModeActive) { toggleFocusMode(); return }
     if (e.key === 'Escape' && findOpen) { findOpen = false; return }
 
     // Reading polish shortcuts. Use e.code for the bracket keys since Shift+[
@@ -427,7 +463,7 @@
 
   // ───── command palette ─────
 
-  $: commands = buildCommands(doc, folder, recent, toc, editing, theme, mcpStatus)
+  $: commands = buildCommands(doc, folder, recent, toc, editing, theme, mcpStatus, focusModeActive, sidebarOpen)
 
   function buildCommands(
     d: Doc | null,
@@ -437,6 +473,8 @@
     _editing: boolean,
     _theme: ThemeKey,
     _mcp: MCPStatus,
+    _focusActive: boolean,
+    _sidebarOpen: boolean,
   ): Command[] {
     const cmds: Command[] = []
 
@@ -460,6 +498,7 @@
       }
     }
     cmds.push({ id: 'sidebar',     group: 'action', label: sidebarOpen ? 'hide sidebar' : 'show sidebar', hint: '⌃ B', run: () => { sidebarOpen = !sidebarOpen } })
+    cmds.push({ id: 'focus',       group: 'action', label: focusModeActive ? 'exit focus mode' : 'focus mode', hint: '⌃ ⇧ F', matchText: 'focus distraction-free slab read', run: toggleFocusMode })
     cmds.push({ id: 'settings',    group: 'action', label: 'settings…', hint: '⌃ ,', matchText: 'settings preferences config', run: () => { settingsOpen = true } })
 
     // Reading polish — cycle actions get the shortcut hint, presets show ✓ on active.
@@ -680,13 +719,16 @@
   editing={editing}
   readOnly={!!doc?.readOnly}
   isMCP={!!doc?.isMCP}
+  mcpClient={doc?.mcpClient ?? ''}
   mcpRunning={mcpStatus.running}
+  focusActive={focusModeActive}
   on:toggleSidebar={() => (sidebarOpen = !sidebarOpen)}
   on:open={openDialog}
   on:find={() => (findOpen = !findOpen)}
   on:palette={() => (paletteOpen = !paletteOpen)}
   on:edit={toggleEdit}
   on:settings={() => (settingsOpen = true)}
+  on:toggleFocus={toggleFocusMode}
 />
 
 <div class="shell">

@@ -11,7 +11,9 @@
   export let editing: boolean = false
   export let readOnly: boolean = false
   export let isMCP: boolean = false
+  export let mcpClient: string = ''
   export let mcpRunning: boolean = false
+  export let focusActive: boolean = false
 
   const dispatch = createEventDispatcher<{
     toggleSidebar: void
@@ -22,6 +24,7 @@
     print: void
     edit: void
     settings: void
+    toggleFocus: void
   }>()
 
   $: docDisplay = docName.replace(/\.(md|markdown|mdown|mkd|mdx)$/i, '')
@@ -52,7 +55,7 @@
 </script>
 
 <header class="topbar drag" on:dblclick={() => ToggleMaximizeWindow()}>
-  <div class="anchor no-drag" class:sidebar-open={sidebarOpen}>
+  <div class="anchor no-drag" class:sidebar-open={sidebarOpen} class:mcp={isMCP}>
     <button class="tb-action" on:click={() => dispatch('toggleSidebar')} title="Toggle sidebar (Ctrl B)" aria-label="Toggle sidebar">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
         <rect x="2" y="3" width="12" height="10" rx="1" />
@@ -62,14 +65,20 @@
     <span class="doc-name">
       {#if docDisplay}
         <span class="doc">{docDisplay}</span>
-        {#if isMCP}
-          <span class="mcp-chip" title="Presented via MCP — task list is interactive">mcp</span>
-        {/if}
       {:else}
         <span class="wordmark">upmark</span>
       {/if}
     </span>
   </div>
+
+  {#if isMCP}
+    <div class="mcp-banner no-drag" title="Presented via MCP — task list is interactive">
+      <span class="mcp-chip">mcp</span>
+      {#if mcpClient}
+        <span class="mcp-client">{mcpClient}</span>
+      {/if}
+    </div>
+  {/if}
 
   <div class="drag-fill" aria-hidden="true"></div>
 
@@ -126,6 +135,19 @@
         <circle cx="6"  cy="4"  r="1.6" fill="var(--bg)"/>
         <circle cx="10" cy="8"  r="1.6" fill="var(--bg)"/>
         <circle cx="5"  cy="12" r="1.6" fill="var(--bg)"/>
+      </svg>
+    </button>
+    <button
+      class="tb-action"
+      class:active={focusActive}
+      on:click={() => dispatch('toggleFocus')}
+      title={focusActive ? 'Exit focus mode (Esc or Ctrl Shift F)' : 'Focus mode (Ctrl Shift F)'}
+      aria-label={focusActive ? 'Exit focus mode' : 'Focus mode'}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6" y="4" width="4" height="8" rx="0.5"/>
+        <polyline points="6.5,2.5 8,1 9.5,2.5"/>
+        <polyline points="6.5,13.5 8,15 9.5,13.5"/>
       </svg>
     </button>
     <div class="window-controls">
@@ -207,9 +229,41 @@
     border: 1px solid var(--accent);
     border-radius: 3px;
     padding: 1px 5px;
-    margin-left: 8px;
     line-height: 1;
     vertical-align: middle;
+  }
+
+  /* Banner sits immediately right of the sidebar divider when an LLM has
+     pushed a doc into upmark. Pairs the chip with the originating client
+     name (e.g. "Claude Desktop") so you can see *who* is driving. */
+  .mcp-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    flex-shrink: 0;
+  }
+  .mcp-client {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+
+  /* When the active doc is MCP-presented, tint the .anchor strip (sits over
+     the sidebar column in the topbar) with the theme's accent — ambient
+     signal that this window is being driven externally. Foreground colors
+     invert to read against the tint. */
+  .anchor.mcp {
+    background: var(--accent);
+  }
+  .anchor.mcp .doc,
+  .anchor.mcp .wordmark,
+  .anchor.mcp .tb-action {
+    color: var(--bg);
+  }
+  .anchor.mcp .tb-action:hover {
+    color: var(--bg);
+    background: rgba(0, 0, 0, 0.12);
   }
 
   /* The center band is pure drag region — eats all available space between
