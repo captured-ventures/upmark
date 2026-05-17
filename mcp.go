@@ -64,6 +64,10 @@ type MCPManager struct {
 	httpServer *http.Server
 	running    bool
 	port       int
+
+	// lastActivity tracks the most recent tool-handler invocation. The idle
+	// monitor (server mode only) reads this to decide when to auto-exit.
+	lastActivity time.Time
 }
 
 func newMCPManager(a *App) *MCPManager {
@@ -111,6 +115,18 @@ func (m *MCPManager) Start(port int) error {
 		WriteTimeout: 0,
 	}
 	m.running = true
+	m.lastActivity = time.Now()
+
+	// Record this process as the active MCP server so the bridge (and any
+	// future tooling) can find us. Don't fail the start if the write errors;
+	// the lockfile is a convenience, not a correctness requirement.
+	mode := "ui"
+	if m.app != nil && m.app.serverMode {
+		mode = "server"
+	}
+	if err := writeMCPLock(port, mode); err != nil {
+		fmt.Println("mcp lockfile write:", err)
+	}
 
 	go func() {
 		_ = m.httpServer.Serve(ln)
@@ -129,12 +145,45 @@ func (m *MCPManager) Stop() error {
 	m.running = false
 	m.mu.Unlock()
 
+	clearMCPLock()
+
 	if srv == nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return srv.Shutdown(ctx)
+}
+
+// runIdleMonitor is started in server mode only. It polls every minute; if
+// there are no presented docs and no tool activity within `timeout`, it
+// shuts the app down so abandoned bridge-launched processes don't linger.
+func (m *MCPManager) runIdleMonitor(ctx context.Context, timeout time.Duration) {
+	tick := time.NewTicker(1 * time.Minute)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			m.mu.RLock()
+			idle := time.Since(m.lastActivity)
+			docCount := len(m.docs)
+			m.mu.RUnlock()
+			if docCount == 0 && idle >= timeout {
+				fmt.Println("mcp idle timeout reached, exiting")
+				wailsruntime.Quit(ctx)
+				return
+			}
+		}
+	}
+}
+
+// touchActivity is called from every tool handler to reset the idle clock.
+func (m *MCPManager) touchActivity() {
+	m.mu.Lock()
+	m.lastActivity = time.Now()
+	m.mu.Unlock()
 }
 
 // ───── tool registration ─────
@@ -200,6 +249,7 @@ func (m *MCPManager) registerTools(s *server.MCPServer) {
 // ───── tool handlers ─────
 
 func (m *MCPManager) handlePresent(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	m.touchActivity()
 	content := req.GetString("content", "")
 	title := req.GetString("title", "")
 	if strings.TrimSpace(content) == "" {
@@ -232,6 +282,13 @@ func (m *MCPManager) handlePresent(ctx context.Context, req mcp.CallToolRequest)
 
 	wailsruntime.EventsEmit(m.app.ctx, "mcp-doc-presented", doc)
 
+	// In server mode (launched by the bridge), the window starts hidden.
+	// A doc presentation is the natural moment to surface it. The pref
+	// controls whether we also pull focus.
+	if m.app != nil && m.app.serverMode {
+		m.app.ShowWindowForPresent()
+	}
+
 	return mcpJSON(map[string]any{
 		"document_id":  doc.ID,
 		"title":        doc.Title,
@@ -241,6 +298,7 @@ func (m *MCPManager) handlePresent(ctx context.Context, req mcp.CallToolRequest)
 }
 
 func (m *MCPManager) handleUpdate(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	m.touchActivity()
 	id := req.GetString("document_id", "")
 	content := req.GetString("content", "")
 	if id == "" {
@@ -277,6 +335,7 @@ func (m *MCPManager) handleUpdate(ctx context.Context, req mcp.CallToolRequest) 
 }
 
 func (m *MCPManager) handleStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	m.touchActivity()
 	id := req.GetString("document_id", "")
 	if id == "" {
 		return mcp.NewToolResultError("document_id is required"), nil
@@ -293,6 +352,7 @@ func (m *MCPManager) handleStatus(ctx context.Context, req mcp.CallToolRequest) 
 }
 
 func (m *MCPManager) handleClose(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	m.touchActivity()
 	id := req.GetString("document_id", "")
 	if id == "" {
 		return mcp.NewToolResultError("document_id is required"), nil
@@ -317,6 +377,7 @@ func (m *MCPManager) handleClose(ctx context.Context, req mcp.CallToolRequest) (
 }
 
 func (m *MCPManager) handleList(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	m.touchActivity()
 	m.mu.RLock()
 	list := make([]map[string]any, 0, len(m.docOrder))
 	for _, id := range m.docOrder {

@@ -34,6 +34,12 @@ type Prefs struct {
 	// MCP server settings — off by default for privacy
 	MCPEnabled bool `json:"mcpEnabled,omitempty"`
 	MCPPort    int  `json:"mcpPort,omitempty"`
+	// MCPWindowOnPresent controls what happens when an LLM calls
+	// present_document while upmark is running. Values:
+	//   "show-no-focus"  — show/restore the window, don't steal focus (default)
+	//   "show-and-focus" — show/restore and pull to foreground
+	// Future: "stay-hidden" once tray support lands.
+	MCPWindowOnPresent string `json:"mcpWindowOnPresent,omitempty"`
 
 	// WelcomeSeen flips to true the first time the welcome doc opens, so
 	// subsequent launches don't shove it in front of the user again.

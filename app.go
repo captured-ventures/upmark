@@ -39,6 +39,11 @@ type App struct {
 	// Read on startup and consumed once.
 	startupFile string
 
+	// serverMode is true when launched with --mcp-server (typically by the
+	// MCPB bridge). The window starts hidden; MCP is force-enabled; the app
+	// auto-exits after an idle period with no clients and no presented docs.
+	serverMode bool
+
 	// Suppress fsnotify events for a brief window after we write to a file
 	// ourselves, so the editor's auto-save doesn't trigger a re-render loop.
 	selfWrites map[string]time.Time
@@ -49,6 +54,46 @@ type App struct {
 // SetStartupFile is called from main.go after parsing os.Args.
 func (a *App) SetStartupFile(p string) {
 	a.startupFile = p
+}
+
+// SetServerMode is called from main.go when --mcp-server is in os.Args.
+// Behavior changes: window starts hidden, MCP is force-enabled at startup,
+// idle exit kicks in.
+func (a *App) SetServerMode(s bool) {
+	a.serverMode = s
+}
+
+// IsServerMode is bound to JS so the frontend can adjust UI for headless
+// runs (e.g., hide controls that don't apply).
+func (a *App) IsServerMode() bool {
+	return a.serverMode
+}
+
+// ShowWindowForPresent is called when an MCP document is presented and the
+// app is running in server mode. Honors the MCPWindowOnPresent pref.
+func (a *App) ShowWindowForPresent() {
+	if a.ctx == nil {
+		return
+	}
+	behavior := a.prefs.MCPWindowOnPresent
+	if behavior == "" {
+		behavior = "show-no-focus"
+	}
+	switch behavior {
+	case "show-and-focus":
+		wailsruntime.Show(a.ctx)
+		wailsruntime.WindowUnminimise(a.ctx)
+	case "show-no-focus":
+		// Wails v2 doesn't expose a "show without focus" primitive cleanly;
+		// the closest is Show() which on Windows raises but doesn't always
+		// pull focus from another full-screen app. Acceptable for v1.
+		wailsruntime.Show(a.ctx)
+		wailsruntime.WindowUnminimise(a.ctx)
+	case "stay-hidden":
+		// Reserved for tray-enabled future. Currently treats as show-no-focus
+		// so the user can find the window.
+		wailsruntime.Show(a.ctx)
+	}
 }
 
 // ConsumeStartupFile returns the startup file (if any) and clears it so the
@@ -133,7 +178,29 @@ func (a *App) startup(ctx context.Context) {
 		wailsruntime.WindowSetPosition(ctx, a.prefs.WindowX, a.prefs.WindowY)
 	}
 
-	// Start the MCP server if enabled.
+	// Server mode: force MCP on for this session without mutating prefs.
+	// The MCPB bridge launched us specifically to host the SSE server.
+	if a.serverMode {
+		port := a.prefs.MCPPort
+		if port <= 0 {
+			port = defaultMCPPort
+		}
+		if err := a.mcp.Start(port); err != nil {
+			fmt.Println("mcp start (server mode):", err)
+			// In server mode we can't really proceed without the server.
+			// Wails has already initialized the runtime, so the cleanest
+			// exit is to quit through it.
+			wailsruntime.Quit(ctx)
+			return
+		}
+		// Idle-exit monitor: if no MCP docs are presented and no tool
+		// activity for the configured timeout, shut down. Configurable
+		// timeout matches the original issue spec.
+		go a.mcp.runIdleMonitor(ctx, 60*time.Minute)
+		return
+	}
+
+	// UI mode: honor the prefs flag.
 	if a.prefs.MCPEnabled {
 		port := a.prefs.MCPPort
 		if port <= 0 {
@@ -347,9 +414,10 @@ func (a *App) GetChromaCSS() ChromaCSS {
 
 // UIPrefs is the read-side bundle for the frontend.
 type UIPrefs struct {
-	ReadingWidth string `json:"readingWidth"`
-	FontSize     int    `json:"fontSize"`
-	Theme        string `json:"theme"`
+	ReadingWidth       string `json:"readingWidth"`
+	FontSize           int    `json:"fontSize"`
+	Theme              string `json:"theme"`
+	MCPWindowOnPresent string `json:"mcpWindowOnPresent"`
 }
 
 func (a *App) GetUIPrefs() UIPrefs {
@@ -365,7 +433,20 @@ func (a *App) GetUIPrefs() UIPrefs {
 	if th == "" {
 		th = "editorial"
 	}
-	return UIPrefs{ReadingWidth: rw, FontSize: fs, Theme: th}
+	wop := a.prefs.MCPWindowOnPresent
+	if wop == "" {
+		wop = "show-no-focus"
+	}
+	return UIPrefs{ReadingWidth: rw, FontSize: fs, Theme: th, MCPWindowOnPresent: wop}
+}
+
+// SetMCPWindowOnPresent persists the behavior when an LLM calls present_document.
+func (a *App) SetMCPWindowOnPresent(behavior string) {
+	switch behavior {
+	case "show-no-focus", "show-and-focus":
+		a.prefs.MCPWindowOnPresent = behavior
+		_ = a.prefs.save()
+	}
 }
 
 // SetTheme persists the chosen theme name.

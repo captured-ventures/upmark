@@ -28,6 +28,7 @@
     MCPSetViewState,
     IsFirstLaunch,
     OpenWelcome,
+    SetMCPWindowOnPresent,
   } from '../wailsjs/go/main/App'
 
   import TopBar from './lib/TopBar.svelte'
@@ -112,6 +113,9 @@
 
   // MCP server state
   let mcpStatus: MCPStatus = { enabled: false, running: false, port: 11451, url: '' }
+  // present_document window behavior pref — synced from backend on mount.
+  type WindowOnPresent = 'show-no-focus' | 'show-and-focus'
+  let mcpWindowOnPresent: WindowOnPresent = 'show-no-focus'
 
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme)
@@ -360,6 +364,10 @@
     try { await SetMCPPort(port) } catch (e) { console.error(e) }
     await refreshMCPStatus()
   }
+  async function onSettingsWindowOnPresent(behavior: WindowOnPresent) {
+    mcpWindowOnPresent = behavior
+    try { await SetMCPWindowOnPresent(behavior) } catch (e) { console.error(e) }
+  }
   async function onCopyMCPURL() {
     try { await navigator.clipboard.writeText(mcpStatus.url) } catch (e) { console.error(e) }
   }
@@ -581,6 +589,9 @@
       if (p?.theme && (themeOrder as string[]).includes(p.theme)) {
         theme = p.theme as ThemeKey
       }
+      if (p?.mcpWindowOnPresent === 'show-no-focus' || p?.mcpWindowOnPresent === 'show-and-focus') {
+        mcpWindowOnPresent = p.mcpWindowOnPresent
+      }
     } catch (e) { console.error('GetUIPrefs:', e) }
     applyReadingVars()
     applyTheme()
@@ -734,11 +745,13 @@
   readingWidth={readingWidth}
   fontSize={fontSize}
   mcpStatus={mcpStatus}
+  mcpWindowOnPresent={mcpWindowOnPresent}
   on:setTheme={(e) => setThemeAndSave(e.detail)}
   on:setWidth={(e) => setWidth(e.detail)}
   on:setFontSize={(e) => onSettingsFontSize(e.detail)}
   on:toggleMCP={toggleMCP}
   on:setMCPPort={(e) => onSettingsMCPPort(e.detail)}
+  on:setMCPWindowOnPresent={(e) => onSettingsWindowOnPresent(e.detail)}
   on:copyMCPURL={onCopyMCPURL}
 />
 

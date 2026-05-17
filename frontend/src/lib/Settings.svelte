@@ -10,12 +10,14 @@
     | 'typewriter' | 'midnight' | 'gameboy'
 
   type WidthKey = 'narrow' | 'normal' | 'wide'
+  type WindowOnPresent = 'show-no-focus' | 'show-and-focus'
 
   export let open: boolean = false
   export let theme: ThemeKey
   export let readingWidth: WidthKey
   export let fontSize: number
   export let mcpStatus: MCPStatus
+  export let mcpWindowOnPresent: WindowOnPresent = 'show-no-focus'
 
   const dispatch = createEventDispatcher<{
     setTheme: ThemeKey
@@ -23,6 +25,7 @@
     setFontSize: number
     toggleMCP: void
     setMCPPort: number
+    setMCPWindowOnPresent: WindowOnPresent
     copyMCPURL: void
   }>()
 
@@ -341,6 +344,26 @@ url = "${url}"`,
                 <code class="url-display">{mcpStatus.url}</code>
                 <button class="ghost-btn" on:click={() => dispatch('copyMCPURL')}>copy</button>
               </label>
+
+              <label class="row">
+                <span>on present</span>
+                <div class="seg seg-inline">
+                  <button
+                    class="seg-btn"
+                    class:active={mcpWindowOnPresent === 'show-no-focus'}
+                    on:click={() => dispatch('setMCPWindowOnPresent', 'show-no-focus')}
+                  >show</button>
+                  <button
+                    class="seg-btn"
+                    class:active={mcpWindowOnPresent === 'show-and-focus'}
+                    on:click={() => dispatch('setMCPWindowOnPresent', 'show-and-focus')}
+                  >show + focus</button>
+                </div>
+              </label>
+              <p class="hint hint-inline">
+                What happens when an LLM presents a document: surface the
+                window quietly, or also pull focus.
+              </p>
 
               <h3>connect a client</h3>
               <p class="hint">
@@ -834,6 +857,16 @@ url = "${url}"`,
     transition: color 120ms;
   }
   .target-docs:hover { color: var(--accent); }
+
+  .hint-inline {
+    margin: 4px 0 8px;
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .seg-inline {
+    margin: 0;
+  }
 
   .hint-aside {
     margin-top: 14px;
