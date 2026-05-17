@@ -57,9 +57,67 @@
     const t = e.target as HTMLElement
     if (t.closest('button')) e.preventDefault()
   }
+
+  // Keyboard navigation: arrow keys sequence through TOC + folder + recent;
+  // Enter activates the focused item; ←/→ on a folder header collapse/expand;
+  // Escape returns focus to the main document area.
+  let sidebarEl: HTMLElement
+  const NAV_SELECTOR = '.toc-item, .ft-dirname, .ft-file, .file-item'
+
+  function visibleNavItems(): HTMLElement[] {
+    if (!sidebarEl) return []
+    return Array.from(sidebarEl.querySelectorAll<HTMLElement>(NAV_SELECTOR))
+      .filter((el) => el.offsetParent !== null)
+  }
+
+  function onSidebarKeydown(e: KeyboardEvent) {
+    const target = e.target as HTMLElement
+    const items = visibleNavItems()
+    if (items.length === 0) return
+    const idx = items.indexOf(target)
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const next = idx < 0 ? items[0] : items[Math.min(idx + 1, items.length - 1)]
+      next.focus({ preventScroll: false })
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      const prev = idx <= 0 ? items[0] : items[idx - 1]
+      prev.focus({ preventScroll: false })
+    } else if (e.key === 'Home' && idx >= 0) {
+      e.preventDefault()
+      items[0].focus()
+    } else if (e.key === 'End' && idx >= 0) {
+      e.preventDefault()
+      items[items.length - 1].focus()
+    } else if (e.key === 'Enter' && idx >= 0) {
+      e.preventDefault()
+      // <summary> Enter natively toggles; let it. Buttons need a click().
+      if (target.tagName !== 'SUMMARY') target.click()
+    } else if (e.key === 'ArrowRight' && target.classList.contains('ft-dirname')) {
+      e.preventDefault()
+      const details = target.closest('details') as HTMLDetailsElement | null
+      if (details) details.open = true
+    } else if (e.key === 'ArrowLeft' && target.classList.contains('ft-dirname')) {
+      e.preventDefault()
+      const details = target.closest('details') as HTMLDetailsElement | null
+      if (details) details.open = false
+    } else if (e.key === 'Escape' && idx >= 0) {
+      e.preventDefault()
+      target.blur()
+      const viewer = document.querySelector('.viewer') as HTMLElement | null
+      viewer?.focus({ preventScroll: true })
+    }
+  }
 </script>
 
-<aside class="sidebar" class:open on:mousedown={suppressButtonFocus}>
+<aside
+  class="sidebar"
+  class:open
+  bind:this={sidebarEl}
+  on:mousedown={suppressButtonFocus}
+  on:keydown={onSidebarKeydown}
+>
   <div class="sb-inner">
     <div class="sb-top">
       {#if toc.length > 0}

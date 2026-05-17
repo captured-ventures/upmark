@@ -344,6 +344,7 @@
 <div
   class="viewer"
   class:drag-over={dragOver}
+  tabindex="-1"
   bind:this={container}
   on:click={handleClick}
   on:scroll={onScroll}
