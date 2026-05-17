@@ -206,8 +206,8 @@ A paragraph with **bold** and a [[wikilink]] and $E=mc^2$ and:
 		`class="math-inline"`,
 		`class="mermaid"`,
 		`class="frontmatter frontmatter-under"`, // title was deduped → under H1
-		`by Brad`,                              // author byline still rendered
-		`class="chroma"`,                       // chroma syntax highlighting applied
+		`by Brad`,                               // author byline still rendered
+		`class="chroma"`,                        // chroma syntax highlighting applied
 	}
 	for _, s := range mustContain {
 		if !strings.Contains(out, s) {
