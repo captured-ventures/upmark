@@ -33,3 +33,7 @@ local/
 
 # Claude Code working dir (per-session state, scheduled tasks, etc.)
 .claude/
+
+# MCPB build artifact — produced by `cd bridge && npm run pack`, attached to
+# GitHub releases via the release workflow rather than tracked here.
+*.mcpb

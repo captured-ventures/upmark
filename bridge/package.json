@@ -6,7 +6,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node bridge.js"
+    "start": "node bridge.js",
+    "test:smoke": "node test-bridge.js",
+    "pack": "npx --yes @anthropic-ai/mcpb pack . upmark.mcpb"
   },
   "engines": {
     "node": ">=20"

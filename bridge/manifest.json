@@ -1,0 +1,79 @@
+{
+  "manifest_version": "0.2",
+  "name": "upmark",
+  "display_name": "upmark",
+  "version": "0.7.0",
+  "description": "Present markdown documents to a human reader in upmark, with interactive task lists that flow back to the LLM.",
+  "long_description": "upmark is a native markdown reader for people who'd rather *read* their notes than fight a kitchen-sink editor. This extension lets MCP clients that don't speak localhost SSE (Claude Desktop, Claude Code) talk to upmark's MCP server through a stdio bridge.\n\nThe bridge auto-launches upmark if it isn't already running, then proxies tool calls — `present_document` pushes a document into the reader, `get_document_status` reads back which task-list items the user has checked, and so on.\n\nupmark itself must be installed separately from <https://github.com/captured-ventures/upmark/releases>. The bridge searches Program Files, /Applications, and PATH; set `UPMARK_BIN` to override.",
+  "author": {
+    "name": "Captured Ventures",
+    "email": "brad@founder.media",
+    "url": "https://upmark.run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/captured-ventures/upmark"
+  },
+  "homepage": "https://upmark.run",
+  "documentation": "https://github.com/captured-ventures/upmark/blob/main/README.md",
+  "support": "https://github.com/captured-ventures/upmark/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "bridge.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/bridge.js"],
+      "env": {
+        "UPMARK_BIN": "${user_config.upmark_bin}",
+        "UPMARK_MCP_PORT": "${user_config.upmark_mcp_port}"
+      }
+    }
+  },
+  "user_config": {
+    "upmark_bin": {
+      "type": "string",
+      "title": "upmark binary path",
+      "description": "Override the path to the upmark binary. Leave blank to auto-detect (Program Files on Windows, /Applications on macOS, PATH on Linux).",
+      "required": false,
+      "default": ""
+    },
+    "upmark_mcp_port": {
+      "type": "string",
+      "title": "MCP server port",
+      "description": "Port upmark exposes the MCP server on. Leave at 11451 unless you've changed it in upmark's settings.",
+      "required": false,
+      "default": "11451"
+    }
+  },
+  "tools": [
+    {
+      "name": "present_document",
+      "description": "Display a markdown document in upmark for the user to read and interact with. Returns the document id, which can be passed to get_document_status to poll for the user's task-list selections, or to update_document to revise the content."
+    },
+    {
+      "name": "update_document",
+      "description": "Replace the content of a previously-presented document. Task-list selections that match by line text are preserved; new tasks start unchecked."
+    },
+    {
+      "name": "get_document_status",
+      "description": "Return the current status of a presented document, including which task-list items the user has checked, whether the doc is currently in view, and whether the user has explicitly closed it."
+    },
+    {
+      "name": "close_document",
+      "description": "Remove a presented document from upmark."
+    },
+    {
+      "name": "list_presented",
+      "description": "List all documents currently presented in upmark."
+    }
+  ],
+  "keywords": ["markdown", "reader", "documents", "review", "presentation"],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}

@@ -6,13 +6,23 @@ This folder is the working copy of what eventually gets packaged as `upmark.mcpb
 
 ## Status
 
-Phase 3 of [#9](https://github.com/captured-ventures/upmark/issues/9).
+Phase 4 of [#9](https://github.com/captured-ventures/upmark/issues/9).
 
 - [x] Phase 1: backend `--mcp-server` flag + lockfile + idle exit + window-show pref
 - [x] Phase 2: stdio↔SSE proxy against a *running* upmark
 - [x] Phase 3: bridge auto-launches `upmark --mcp-server` when not running
-- [ ] Phase 4: MCPB packaging (`manifest.json` + zip → `upmark.mcpb`)
+- [x] Phase 4: MCPB packaging (`manifest.json` + zip → `upmark.mcpb`)
 - [ ] Phase 5: release workflow attaches `.mcpb` to GitHub Releases
+
+## Pack a .mcpb locally
+
+```sh
+cd bridge
+npm install     # one-time, gets the MCP SDK
+npm run pack    # produces upmark.mcpb in this directory
+```
+
+`upmark.mcpb` is a zip containing `manifest.json`, `bridge.js`, the icon, and `node_modules`. Drag it into Claude Desktop (Settings → Extensions) to install. Tools appear immediately; first tool call triggers the bridge → auto-launches upmark → proxies.
 
 ## Run it
 
