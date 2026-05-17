@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "upmark",
   "display_name": "upmark",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Present markdown documents to a human reader in upmark, with interactive task lists that flow back to the LLM.",
   "long_description": "upmark is a native markdown reader for people who'd rather *read* their notes than fight a kitchen-sink editor. This extension lets MCP clients that don't speak localhost SSE (Claude Desktop, Claude Code) talk to upmark's MCP server through a stdio bridge.\n\nThe bridge auto-launches upmark if it isn't already running, then proxies tool calls — `present_document` pushes a document into the reader, `get_document_status` reads back which task-list items the user has checked, and so on.\n\nupmark itself must be installed separately from <https://github.com/captured-ventures/upmark/releases>. The bridge searches Program Files, /Applications, and PATH; set `UPMARK_BIN` to override.",
   "author": {
