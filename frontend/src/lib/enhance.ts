@@ -2,21 +2,59 @@ import katex from 'katex'
 import 'katex/contrib/mhchem'
 
 let mermaidPromise: Promise<any> | null = null
+let mermaidThemeIsDark: boolean | null = null
+
+// Decide whether mermaid should use its dark or light palette by reading the
+// currently-applied --bg CSS variable. This tracks upmark's actual rendered
+// surface (different themes can resolve to light or dark, some auto-track the
+// OS preference), so swapping themes mid-session can re-derive cleanly.
+function isCurrentThemeDark(): boolean {
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  const m = bg.match(/^#([0-9a-f]{3,8})$/i) ?? bg.match(/^rgba?\(([^)]+)\)$/i)
+  if (m) {
+    let r = 0, g = 0, b = 0
+    if (bg.startsWith('#')) {
+      const hex = m[1].length === 3 ? m[1].split('').map((c) => c + c).join('') : m[1]
+      r = parseInt(hex.slice(0, 2), 16)
+      g = parseInt(hex.slice(2, 4), 16)
+      b = parseInt(hex.slice(4, 6), 16)
+    } else {
+      const parts = m[1].split(',').map((s) => parseFloat(s.trim()))
+      r = parts[0]; g = parts[1]; b = parts[2]
+    }
+    return (r * 0.299 + g * 0.587 + b * 0.114) / 255 < 0.5
+  }
+  return matchMedia('(prefers-color-scheme: dark)').matches
+}
 
 async function getMermaid() {
   if (!mermaidPromise) {
     mermaidPromise = import('mermaid').then((m) => {
       const mermaid = m.default
-      const dark = matchMedia('(prefers-color-scheme: dark)').matches
+      mermaidThemeIsDark = isCurrentThemeDark()
       mermaid.initialize({
         startOnLoad: false,
-        theme: dark ? 'dark' : 'default',
+        theme: mermaidThemeIsDark ? 'dark' : 'default',
         securityLevel: 'strict',
       })
       return mermaid
     })
   }
   return mermaidPromise
+}
+
+// Called from refreshMermaid: re-initialize mermaid if the active theme's
+// light/dark resolution has flipped since the last init.
+function ensureMermaidThemeMatches(mermaid: any): boolean {
+  const dark = isCurrentThemeDark()
+  if (mermaidThemeIsDark === dark) return false
+  mermaidThemeIsDark = dark
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: dark ? 'dark' : 'default',
+    securityLevel: 'strict',
+  })
+  return true
 }
 
 const CALLOUT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const
@@ -305,6 +343,32 @@ export async function enhanceMermaid(root: HTMLElement) {
   const mermaid = await getMermaid()
   for (const block of blocks) {
     const code = block.textContent ?? ''
+    // Stash the source so refreshMermaid can re-render on theme switch without
+    // the markdown having to round-trip through the renderer again.
+    block.setAttribute('data-mermaid-source', code)
+    const id = `m-${Math.random().toString(36).slice(2, 10)}`
+    try {
+      const { svg, bindFunctions } = await mermaid.render(id, code)
+      block.innerHTML = svg
+      bindFunctions?.(block)
+    } catch (e: any) {
+      block.innerHTML = `<div style="color: var(--callout-caution); padding: 8px; font-family: monospace; font-size: 12px;">Mermaid error: ${(e?.message ?? e).toString().replace(/[<>]/g, (c: string) => (c === '<' ? '&lt;' : '&gt;'))}</div>`
+    }
+  }
+}
+
+// Re-render every mermaid block in `root` with the current theme. Called
+// when the user swaps themes mid-session; reads the original source out of
+// data-mermaid-source so we don't need the markdown text.
+export async function refreshMermaid(root: HTMLElement) {
+  if (!mermaidPromise) return // mermaid never loaded; nothing to refresh
+  const blocks = Array.from(root.querySelectorAll('pre.mermaid')) as HTMLElement[]
+  if (blocks.length === 0) return
+  const mermaid = await mermaidPromise
+  if (!ensureMermaidThemeMatches(mermaid)) return
+  for (const block of blocks) {
+    const code = block.getAttribute('data-mermaid-source') ?? ''
+    if (!code) continue
     const id = `m-${Math.random().toString(36).slice(2, 10)}`
     try {
       const { svg, bindFunctions } = await mermaid.render(id, code)

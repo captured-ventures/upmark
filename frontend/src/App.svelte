@@ -38,7 +38,7 @@
   import CommandPalette from './lib/CommandPalette.svelte'
   import URLPrompt from './lib/URLPrompt.svelte'
   import Settings from './lib/Settings.svelte'
-  import { scrollToInViewer } from './lib/enhance'
+  import { scrollToInViewer, refreshMermaid } from './lib/enhance'
   import type { Doc, RecentEntry, Folder, TocItem, Command, MCPDoc, MCPStatus } from './lib/types'
 
   const OnFileDrop = (wailsRuntime as any).OnFileDrop as (
@@ -120,6 +120,12 @@
   async function setThemeAndSave(t: ThemeKey) {
     theme = t
     applyTheme()
+    // Mermaid is initialized once with a light/dark choice; re-render any
+    // diagrams in the active doc so they pick up the new theme.
+    requestAnimationFrame(() => {
+      const body = document.querySelector('.markdown-body') as HTMLElement | null
+      if (body) refreshMermaid(body).catch((e) => console.error('mermaid refresh:', e))
+    })
     try { await SetTheme(t) } catch (e) { console.error(e) }
   }
 

@@ -110,7 +110,7 @@ flowchart LR
     E -. on change .-> C
 ```
 
-Diagrams initialize once on first render with your light/dark preference. (Heads-up: they don't currently re-init when you swap themes mid-session — close and reopen the doc to refresh.)
+Diagrams pick up the theme's light/dark resolution. Swap themes — the diagram re-renders to match.
 
 ## Themes
 
