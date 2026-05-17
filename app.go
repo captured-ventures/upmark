@@ -19,6 +19,9 @@ type Document struct {
 	Source   string `json:"source"` // raw markdown text, for the editor
 	BaseDir  string `json:"baseDir"`
 	Modified int64  `json:"modified"`
+	// ReadOnly hides editor/save controls in the frontend. Set for the
+	// embedded welcome doc and (eventually) MCP-presented documents.
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 
 // App is the bound struct exposed to JS.

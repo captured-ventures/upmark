@@ -9,6 +9,9 @@ export type Doc = {
   // not from disk. They get interactive task lists and a "via mcp" badge.
   isMCP?: boolean
   mcpId?: string
+  // Built-in docs (welcome) and MCP docs have no disk path — readOnly hides
+  // the edit/save controls so users don't try to write to a synthetic path.
+  readOnly?: boolean
 }
 
 export type MCPDoc = {

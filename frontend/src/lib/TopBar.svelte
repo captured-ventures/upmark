@@ -9,6 +9,7 @@
   export let docName: string = ''
   export let sidebarOpen: boolean = true
   export let editing: boolean = false
+  export let readOnly: boolean = false
   export let isMCP: boolean = false
   export let mcpRunning: boolean = false
 
@@ -81,7 +82,7 @@
         <path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
       </svg>
     </button>
-    {#if docName}
+    {#if docName && !readOnly}
       <button
         class="tb-action"
         class:active={editing}
@@ -94,6 +95,8 @@
           <path d="M9.5 4l2.5 2.5"/>
         </svg>
       </button>
+    {/if}
+    {#if docName}
       <button class="tb-action" on:click={() => dispatch('find')} title="Find (Ctrl F)" aria-label="Find">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
           <circle cx="7" cy="7" r="4.2" /><path d="M10 10l3 3" />

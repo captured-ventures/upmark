@@ -26,6 +26,8 @@
     SetMCPPort,
     MCPSetTaskChecked,
     MCPSetViewState,
+    IsFirstLaunch,
+    OpenWelcome,
   } from '../wailsjs/go/main/App'
 
   import TopBar from './lib/TopBar.svelte'
@@ -207,6 +209,16 @@
     } finally { busy = false }
   }
 
+  async function openWelcome() {
+    if (busy) return
+    busy = true; errorMsg = ''
+    try {
+      const d = await OpenWelcome()
+      if (d) await setDoc(d as Doc, { pushHistory: true })
+    } catch (e: any) { errorMsg = String(e?.message ?? e) }
+    finally { busy = false }
+  }
+
   async function setDoc(d: Doc, opts: { pushHistory?: boolean }) {
     // Flush any pending save for the outgoing doc before switching.
     if (doc && editorDirty) {
@@ -237,7 +249,7 @@
   // ─── editor flow ───
 
   async function toggleEdit() {
-    if (!doc) return
+    if (!doc || doc.readOnly) return
     if (editing && editorDirty) {
       if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = undefined }
       await saveNow()
@@ -417,16 +429,21 @@
     cmds.push({ id: 'open-file',   group: 'action', label: 'open file',   hint: '⌃ O',   run: openDialog })
     cmds.push({ id: 'open-folder', group: 'action', label: 'open folder', hint: '⌃ ⇧ O', run: pickFolder })
     cmds.push({ id: 'open-url',    group: 'action', label: 'open from url', hint: '⌃ L', matchText: 'open url remote github', run: () => { urlPromptOpen = true } })
+    cmds.push({ id: 'welcome',     group: 'action', label: 'show welcome', matchText: 'show welcome help tour intro getting started', run: openWelcome })
     if (d) {
-      cmds.push({ id: 'edit',      group: 'action', label: editing ? 'exit edit mode' : 'edit document', hint: '⌃ E', run: toggleEdit })
-      if (editing) {
-        cmds.push({ id: 'save',    group: 'action', label: 'save', hint: '⌃ S', run: saveNow })
+      if (!d.readOnly) {
+        cmds.push({ id: 'edit',    group: 'action', label: editing ? 'exit edit mode' : 'edit document', hint: '⌃ E', run: toggleEdit })
+        if (editing) {
+          cmds.push({ id: 'save',  group: 'action', label: 'save', hint: '⌃ S', run: saveNow })
+        }
       }
       cmds.push({ id: 'close',     group: 'action', label: 'close document',  hint: '⌃ W', run: closeDoc })
       cmds.push({ id: 'find',      group: 'action', label: 'find in document', hint: '⌃ F', run: () => { findOpen = true } })
       cmds.push({ id: 'print',     group: 'action', label: 'print / save pdf', hint: '⌃ P', run: () => window.print() })
-      cmds.push({ id: 'reveal',    group: 'action', label: 'reveal in explorer', run: () => RevealInExplorer(d.path).catch(console.error) })
-      cmds.push({ id: 'open-dir',  group: 'action', label: 'open containing folder', run: () => OpenContainingFolder(d.path).catch(console.error) })
+      if (!d.readOnly && !d.isMCP) {
+        cmds.push({ id: 'reveal',    group: 'action', label: 'reveal in explorer', run: () => RevealInExplorer(d.path).catch(console.error) })
+        cmds.push({ id: 'open-dir',  group: 'action', label: 'open containing folder', run: () => OpenContainingFolder(d.path).catch(console.error) })
+      }
     }
     cmds.push({ id: 'sidebar',     group: 'action', label: sidebarOpen ? 'hide sidebar' : 'show sidebar', hint: '⌃ B', run: () => { sidebarOpen = !sidebarOpen } })
     cmds.push({ id: 'settings',    group: 'action', label: 'settings…', hint: '⌃ ,', matchText: 'settings preferences config', run: () => { settingsOpen = true } })
@@ -571,9 +588,14 @@
     } catch (e) { console.error('last folder:', e) }
 
     // Open startup file (CLI arg / file-association) or fall back to last-opened.
+    // If neither is set and this is a first launch, open the embedded welcome doc.
     try {
       const p = await GetStartupOrLastFile()
-      if (p) openPath(p)
+      if (p) {
+        openPath(p)
+      } else if (await IsFirstLaunch()) {
+        await openWelcome()
+      }
     } catch (e) { console.error('startup file:', e) }
 
     unsubChanged = (EventsOn as any)('file-changed', (d: Doc) => {
@@ -639,6 +661,7 @@
   docName={doc?.name ?? ''}
   sidebarOpen={sidebarOpen}
   editing={editing}
+  readOnly={!!doc?.readOnly}
   isMCP={!!doc?.isMCP}
   mcpRunning={mcpStatus.running}
   on:toggleSidebar={() => (sidebarOpen = !sidebarOpen)}

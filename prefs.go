@@ -35,6 +35,10 @@ type Prefs struct {
 	MCPEnabled bool `json:"mcpEnabled,omitempty"`
 	MCPPort    int  `json:"mcpPort,omitempty"`
 
+	// WelcomeSeen flips to true the first time the welcome doc opens, so
+	// subsequent launches don't shove it in front of the user again.
+	WelcomeSeen bool `json:"welcomeSeen,omitempty"`
+
 	mu   sync.Mutex
 	path string
 }
