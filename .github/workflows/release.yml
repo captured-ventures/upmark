@@ -8,8 +8,10 @@ on:
 permissions:
   contents: write
 
-# `os` stays as the stable job-name label even when `runner` changes between
-# providers (same pattern as captured-ventures/rememberize-cli).
+# Same os/runner split as ci.yml: keep `os` as the stable job-name label
+# even when the runner provider changes. We invoke `wails build` directly
+# rather than via dAppServer/wails-build-action because that action still
+# pins actions/upload-artifact@v3, which GitHub force-fails since Jan 2025.
 jobs:
   build:
     name: Build ${{ matrix.os }}
@@ -21,35 +23,64 @@ jobs:
           - os: windows-latest
             runner: blacksmith-2vcpu-windows-2025
             platform: windows/amd64
-            arch: amd64
             artifact_name: upmark-windows-amd64
           - os: macos-latest
             runner: blacksmith-6vcpu-macos-latest
             platform: darwin/universal
-            arch: universal
             artifact_name: upmark-macos-universal
           - os: ubuntu-latest
             runner: blacksmith-4vcpu-ubuntu-2404
             platform: linux/amd64
-            arch: amd64
             artifact_name: upmark-linux-amd64
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Resolve version
         id: version
         shell: bash
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build with Wails
-        uses: dAppServer/wails-build-action@v2.2
-        with:
-          build-name: upmark
-          build-platform: ${{ matrix.platform }}
-          package: true
-          nsis: ${{ matrix.os == 'windows-latest' }}
-          go-version: '1.23'
-          node-version: '20'
+      - name: Install Linux build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      # Wails build does its own frontend npm install + vite build, but it
+      # invokes Go compilation midway (for bindings/manifest), which hits the
+      # //go:embed all:frontend/dist directive before dist exists. Stub it.
+      - name: Stub frontend/dist
+        shell: bash
+        run: mkdir -p frontend/dist && touch frontend/dist/.keep
+
+      - name: Wails build (Windows + NSIS)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: wails build -platform windows/amd64 -nsis -clean -ldflags "-X 'main.version=${{ steps.version.outputs.version }}'"
+
+      - name: Wails build (macOS universal)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: wails build -platform darwin/universal -clean -ldflags "-X 'main.version=${{ steps.version.outputs.version }}'"
+
+      - name: Wails build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: wails build -platform linux/amd64 -clean -ldflags "-X 'main.version=${{ steps.version.outputs.version }}'"
 
       - name: Stage Windows artifacts
         if: matrix.os == 'windows-latest'
