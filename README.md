@@ -76,19 +76,13 @@ A test client lives at [`cmd/mcp-test`](cmd/mcp-test/) — run it with upmark op
 go run ./cmd/mcp-test
 ```
 
-To wire it into Claude Desktop, add to `claude_desktop_config.json`:
+### Client compatibility, today
 
-```json
-{
-  "mcpServers": {
-    "upmark": {
-      "url": "http://127.0.0.1:11451/sse"
-    }
-  }
-}
-```
+The MCP server speaks SSE over `127.0.0.1:11451`. Today that works with any MCP client that can reach a localhost SSE endpoint — Cursor, VS Code, Cline, Continue, Zed, Windsurf, Warp, Codex, Gemini CLI, etc. Setup snippets for each are coming as an in-app pane (tracked in [#8](https://github.com/captured-ventures/upmark/issues/8)).
 
-The server is localhost-only and has no auth — it is intended for a single user on their own machine.
+**The Claude family** (Claude Desktop, Claude Code, Claude.ai) does **not** currently support localhost SSE MCP servers — only stdio or remote. A first-class `.mcpb` bundle that bridges stdio↔SSE is the planned path; it's tracked in [#9](https://github.com/captured-ventures/upmark/issues/9). Until that ships, the closest working integration with Claude is the test client above.
+
+The server is localhost-only and has no auth — intended for a single user on their own machine.
 
 ## Install
 

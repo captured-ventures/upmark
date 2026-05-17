@@ -163,7 +163,7 @@ There's a deliberate dedup: if your front-matter `title` matches the first H1 in
 
 upmark can run a local **Model Context Protocol** server on `127.0.0.1:11451`. Off by default. Turn it on in Settings → MCP server.
 
-When it's running, an MCP-capable client (Claude Desktop, the [test client](https://github.com/captured-ventures/upmark/tree/main/cmd/mcp-test) shipped in this repo, etc.) can:
+When it's running, any MCP client that supports a localhost SSE endpoint — Cursor, VS Code, Cline, Continue, Zed, Windsurf, Warp, Codex, Gemini CLI, or the [test client](https://github.com/captured-ventures/upmark/tree/main/cmd/mcp-test) shipped in this repo — can:
 
 - `present_document` — push a markdown document into your reader window
 - `update_document` — replace its content (task-list checkbox state is preserved across updates, matched by line text)
@@ -172,6 +172,8 @@ When it's running, an MCP-capable client (Claude Desktop, the [test client](http
 - `close_document` — close one
 
 The use-case is using upmark as the *reading surface* for an agent. The model writes a design review, a plan, a status update; you read it in good typography, check off the items you're approving; the model polls to see what stuck.
+
+A note on the Claude family: Claude Desktop, Claude Code, and Claude.ai don't currently support localhost SSE MCP servers — only stdio or remote. A `.mcpb` bundle that bridges the two is in the works; until it ships, Claude can't talk to upmark directly. Every other MCP client listed above works today.
 
 It's localhost-only with no auth. Don't expose the port.
 
